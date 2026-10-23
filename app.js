@@ -27,7 +27,7 @@ const $ = id => document.getElementById(id);
 const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const configured = window.SABAK_CONFIG?.url?.startsWith('https://') && !!window.SABAK_CONFIG?.anonKey && !window.SABAK_CONFIG.anonKey.startsWith('YOUR_');
 const client = configured && window.supabase ? window.supabase.createClient(window.SABAK_CONFIG.url, window.SABAK_CONFIG.anonKey) : null;
-let schools = [], all = [], isAdmin = false, isSuperAdminUser = false;
+let schools = [], all = [], isAdmin = false, isSuperAdminUser = false, adminSchoolId = null;
 const schoolName = id => schools.find(s => String(s.id) === String(id))?.name || 'Мектеби көрсөтүлгөн эмес';
 const observedName = r => String(r.observation?.observed_teacher_name || '').trim();
 const levelField = (name, title) => `<div class="question"><p>${escapeHtml(title)} *</p>${levels.map(v => `<label class="option"><input type="radio" name="${name}" value="${escapeHtml(v)}" required>${escapeHtml(v)}</label>`).join('')}</div>`;
@@ -129,10 +129,11 @@ async function checkSession() {
   if (!client) return;
   const {data,error} = await client.auth.getUser();
   const user = error ? null : data.user;
-  isAdmin = false;
+  isAdmin = false; adminSchoolId = null;
   if (user) {
-    const {data:admin,error:adminError} = await client.from('admin_users').select('user_id').eq('user_id',user.id).maybeSingle();
+    const {data:admin,error:adminError} = await client.from('admin_users').select('user_id,school_id').eq('user_id',user.id).maybeSingle();
     isAdmin = !adminError && !!admin;
+    if (isAdmin && admin.school_id != null) adminSchoolId = String(admin.school_id);
   }
   isSuperAdminUser = await isSuperAdmin();
   isAdmin = isAdmin || isSuperAdminUser;
@@ -150,7 +151,7 @@ $('login').onsubmit = async e => {
   if (error) { $('loginError').textContent = 'Кирүү ишке ашкан жок: ' + error.message; return; }
   await checkSession();
 };
-$('logout').onclick = async () => { await client?.auth.signOut(); all=[]; isAdmin=false; isSuperAdminUser=false; $('loginError').textContent=''; await checkSession(); };
+$('logout').onclick = async () => { await client?.auth.signOut(); all=[]; isAdmin=false; isSuperAdminUser=false; adminSchoolId=null; $('loginError').textContent=''; await checkSession(); };
 async function loadDashboard() {
   try {
     $('adminError').textContent = ''; all=[]; let start=0;
@@ -164,6 +165,7 @@ async function loadDashboard() {
     renderDashboard();
   } catch(e) { $('adminError').textContent = 'Маалыматтарды алуу мүмкүн болгон жок: ' + e.message; }
 }
+const canDeleteReview = r => isAdmin && (isSuperAdminUser || (adminSchoolId !== null && String(r.school_id) === adminSchoolId));
 const schoolFiltered = () => all.filter(r => { const v=$('adminSchool').value; return v==='all' || (v==='none' ? r.school_id==null : String(r.school_id)===v); });
 const visibleRows = () => schoolFiltered().filter(r => [r.teacher_name,observedName(r),r.subject,r.classroom,r.topic,schoolName(r.school_id)].some(x => String(x??'').toLocaleLowerCase().includes($('filter').value.trim().toLocaleLowerCase())));
 
@@ -214,17 +216,32 @@ function recordDetails(r) {
   return `<details><summary>Көрүү</summary>${meta}<h4>Критерийлер боюнча жооптор</h4>${answers}</details>`;
 }
 function renderRecords() {
-  $('records').innerHTML = visibleRows().map(r => `<tr><td>${escapeHtml(new Date(r.created_at).toLocaleString('ky-KG'))}</td><td>${escapeHtml(schoolName(r.school_id))}</td><td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(observedName(r)||'—')}</td><td>${escapeHtml(r.subject)} / ${escapeHtml(r.classroom)}</td><td>${escapeHtml(r.topic)}</td><td>${escapeHtml(r.outcome)}</td><td>${recordDetails(r)}</td><td>${isSuperAdminUser?`<button class="danger smallbtn" data-delete-id="${escapeHtml(r.id)}">Өчүрүү</button>`:''}</td></tr>`).join('') || '<tr><td colspan="9">Маалымат жок</td></tr>';
+  $('records').innerHTML = visibleRows().map(r => `<tr><td>${escapeHtml(new Date(r.created_at).toLocaleString('ky-KG'))}</td><td>${escapeHtml(schoolName(r.school_id))}</td><td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(observedName(r)||'—')}</td><td>${escapeHtml(r.subject)} / ${escapeHtml(r.classroom)}</td><td>${escapeHtml(r.topic)}</td><td>${escapeHtml(r.outcome)}</td><td>${recordDetails(r)}</td><td>${canDeleteReview(r)?`<button class="danger smallbtn" data-delete-id="${escapeHtml(r.id)}">Өчүрүү</button>`:''}</td></tr>`).join('') || '<tr><td colspan="9">Маалымат жок</td></tr>';
 }
 $('adminSchool').onchange = renderDashboard;
 $('filter').oninput = renderRecords;
 $('records').onclick = async e => {
-  const button=e.target.closest('[data-delete-id]'); if(!button||!isSuperAdminUser)return;
-  const id=button.dataset.deleteId; if(!confirm('Бул талдоону биротоло өчүрөсүзбү?'))return;
-  button.disabled=true;
-  const {error}=await client.rpc('admin_delete_review',{review_id:id});
-  if(error){$('adminError').textContent='Өчүрүү ишке ашкан жок: '+error.message;button.disabled=false;return;}
-  await loadDashboard();
+  const button = e.target.closest('[data-delete-id]');
+  if (!button || !client || !isAdmin) return;
+  const id = button.dataset.deleteId;
+  const review = all.find(r => String(r.id) === id);
+  if (!review || !canDeleteReview(review)) {
+    $('adminError').textContent = 'Бул талдоону өчүрүүгө уруксатыңыз жок.';
+    return;
+  }
+  const description = [schoolName(review.school_id), review.teacher_name, observedName(review), review.topic].filter(Boolean).join(' / ');
+  if (!confirm('Төмөнкү талдоону биротоло өчүрөсүзбү?\n\n' + description + '\n\nБул аракет кайтарылбайт.')) return;
+  button.disabled = true;
+  $('adminError').textContent = '';
+  try {
+    // Укукту акыркы жолу Supabase'теги admin_delete_review функциясы текшерет.
+    const {error} = await client.rpc('admin_delete_review', {review_id:id});
+    if (error) throw error;
+    await loadDashboard();
+  } catch (error) {
+    $('adminError').textContent = 'Өчүрүү ишке ашкан жок: ' + error.message;
+    button.disabled = false;
+  }
 };
 async function resetStats(allSchools) {
   if(!isSuperAdminUser)return;
