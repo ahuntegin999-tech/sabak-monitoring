@@ -292,6 +292,35 @@ $('export').onclick=()=>{
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=url;a.download='sabak-monitoring.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
+async function loadManageAdmins() {
+  if (!client || !isSuperAdminUser) return;
+
+  const table = $('manageAdminsTable');
+
+  table.innerHTML =
+    '<tr><td colspan="3">Жүктөлүүдө...</td></tr>';
+
+  const { data, error } = await client.rpc('list_school_admins');
+
+  if (error) {
+    table.innerHTML =
+      '<tr><td colspan="3">Тизмени жүктөөдө ката кетти</td></tr>';
+
+    $('adminManageStatus').textContent =
+      'Ката: ' + error.message;
+
+    return;
+  }
+
+  table.innerHTML = (data || []).map(admin => `
+    <tr>
+      <td>${escapeHtml(admin.email)}</td>
+      <td>${escapeHtml(admin.school_name || 'Башкы администратор')}</td>
+      <td>—</td>
+    </tr>
+  `).join('') ||
+  '<tr><td colspan="3">Администраторлор жок</td></tr>';
+}
 function renderManageSchools() {
   if(!isSuperAdminUser)return;
   
