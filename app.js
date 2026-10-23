@@ -351,8 +351,20 @@ $('addAdminForm').onsubmit = async event => {
       }
     );
 
-    if (error) throw error;
-    if (data?.error) throw new Error(data.error);
+if (error) {
+  let message = error.message;
+
+  if (error.context) {
+    try {
+      const result = await error.context.json();
+      message = result.error || result.message || message;
+    } catch (_) {}
+  }
+
+  throw new Error(message);
+}
+
+if (data?.error) throw new Error(data.error);
 
     $('newAdminEmail').value = '';
     $('newAdminSchool').value = '';
