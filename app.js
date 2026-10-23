@@ -16,6 +16,33 @@ const $=id=>document.getElementById(id);
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const configured=window.SABAK_CONFIG?.url?.startsWith('https://') && !window.SABAK_CONFIG?.anonKey?.startsWith('YOUR_');
 const client=configured&&window.supabase?window.supabase.createClient(window.SABAK_CONFIG.url,window.SABAK_CONFIG.anonKey):null;
+
+async function loadSchools() {
+  const select = document.getElementById('schoolSelect');
+  if (!select || !client) return;
+
+  const { data, error } = await client
+    .from('schools')
+    .select('id, name')
+    .order('name');
+
+  if (error) {
+    console.error('Мектептер жүктөлгөн жок:', error);
+    return;
+  }
+
+  select.innerHTML = '<option value="">Мектепти тандаңыз</option>';
+
+  data.forEach(school => {
+    const option = document.createElement('option');
+    option.value = school.id;
+    option.textContent = school.name;
+    select.appendChild(option);
+  });
+}
+
+loadSchools();
+
 if(!client)$('configWarning').classList.remove('hidden');
 $('questions').innerHTML=questions.map((q,i)=>`<div class="question"><p>${i+1}. ${escapeHtml(q[0])}</p>${q.slice(1).map((a,j)=>`<label class="option"><input type="radio" name="q${i}" value="${j}" required>${escapeHtml(a)}</label>`).join('')}</div>`).join('');
 function tab(which){$('teacher').classList.toggle('hidden',which!=='teacher');$('admin').classList.toggle('hidden',which!=='admin');$('teacherTab').className=which==='teacher'?'':'secondary';$('adminTab').className=which==='admin'?'':'secondary';if(which==='admin')checkSession()}
