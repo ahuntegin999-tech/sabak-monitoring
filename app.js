@@ -24,7 +24,43 @@ $('questions').innerHTML=questions.map((q,i)=>`<div class="question"><p>${i+1}. 
 function tab(which){$('teacher').classList.toggle('hidden',which!=='teacher');$('admin').classList.toggle('hidden',which!=='admin');$('teacherTab').className=which==='teacher'?'':'secondary';$('adminTab').className=which==='admin'?'':'secondary';if(which==='admin')checkSession()}
 $('teacherTab').onclick=()=>tab('teacher');$('adminTab').onclick=()=>tab('admin');
 $('survey').onsubmit=async e=>{e.preventDefault();$('surveyError').textContent='';if(!client){$('surveyError').textContent='Онлайн база азырынча орнотулган эмес.';return}const form=new FormData(e.target);const answers=questions.map((_,i)=>Number(form.get('q'+i)));const schoolId=Number(form.get('school_id'));if(!schools.some(s=>Number(s.id)===schoolId)){$('surveyError').textContent='Мектепти тандаңыз.';return}if(answers.some(v=>![0,1,2].includes(v))){$('surveyError').textContent='10 суроонун баарына жооп бериңиз.';return}const counts=labels.map((_,i)=>answers.filter(x=>x===i).length);const max=Math.max(...counts);const winners=labels.filter((_,i)=>counts[i]===max);const outcome=winners.length===1?winners[0]:'Аралаш: '+winners.join(' / ');const payload={school_id:schoolId,teacher_name:String(form.get('teacher')).trim(),subject:String(form.get('subject')).trim(),classroom:String(form.get('classroom')).trim(),topic:String(form.get('topic')).trim(),answers,counts,outcome};$('submitBtn').disabled=true;try{const {error}=await client.from('lesson_reviews').insert(payload);if(error)throw error;$('survey').classList.add('hidden');$('result').classList.remove('hidden');$('result').innerHTML=`<h2>Жыйынтык сакталды ✓</h2><h3>${escapeHtml(outcome)}</h3>${labels.map((l,i)=>`<p>${l}: <b>${counts[i]*10}%</b></p><div class="bar"><div class="fill" style="width:${counts[i]*10}%"></div></div>`).join('')}<p class="muted">Жыйынтык администрациянын базасына сакталды.</p><button id="again">Жаңы талдоо</button>`;$('again').onclick=()=>{e.target.reset();$('survey').classList.remove('hidden');$('result').classList.add('hidden');window.scrollTo(0,0)}}catch(err){$('surveyError').textContent='Сактоо мүмкүн болгон жок: '+err.message}finally{$('submitBtn').disabled=false}};
-async function checkSession(){if(!client)return;const {data,error}=await client.auth.getUser();const user=error?null:data.user;isAdmin=false;if(user){const {data:admin,error:adminError}=await client.from('admin_users').select('user_id').eq('user_id',user.id).maybeSingle();isAdmin=!adminError&&!!admin} $('loginCard').classList.toggle('hidden',isAdmin);$('dashboard').classList.toggle('hidden',!isAdmin);if(isAdmin)await loadDashboard();else if(user)$('loginError').textContent='Бул аккаунт администратор катары катталган эмес.'}
+
+async function checkSession() {
+  if (!client) return;
+
+  const { data, error } = await client.auth.getUser();
+  const user = error ? null : data.user;
+
+  isAdmin = false;
+
+  if (user) {
+    const { data: admin, error: adminError } = await client
+      .from('admin_users')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    isAdmin = !adminError && !!admin;
+  }
+
+  const superAdmin = isAdmin && await isSuperAdmin();
+
+  $('loginCard').classList.toggle('hidden', isAdmin);
+  $('dashboard').classList.toggle('hidden', !isAdmin);
+
+  $('superAdminPanel').classList.toggle(
+    'hidden',
+    !superAdmin
+  );
+
+  if (isAdmin) {
+    await loadDashboard();
+  } else if (user) {
+    $('loginError').textContent =
+      'Бул аккаунт администратор катары катталган эмес.';
+  }
+}
+
 $('login').onsubmit=async e=>{e.preventDefault();$('loginError').textContent='';if(!client){$('loginError').textContent='Адегенде базаны орнотуңуз.';return}const f=new FormData(e.target);const {error}=await client.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});if(error){$('loginError').textContent='Кирүү ишке ашкан жок: '+error.message;return}await checkSession()};
 $('logout').onclick=async()=>{await client?.auth.signOut();all=[];isAdmin=false;$('loginError').textContent='';await checkSession()};
 async function loadDashboard(){try{$('adminError').textContent='';all=[];let start=0;while(true){const {data,error}=await client.from('lesson_reviews').select('*').order('created_at',{ascending:false}).range(start,start+999);if(error)throw error;all.push(...data);if(data.length<1000)break;start+=1000}renderDashboard()}catch(e){$('adminError').textContent='Маалыматтарды алуу мүмкүн болгон жок: '+e.message}}
@@ -38,3 +74,25 @@ async function resetStats(allSchools){if(!isAdmin)return;const selected=$('admin
 $('resetSchool').onclick=()=>resetStats(false);$('resetAll').onclick=()=>resetStats(true);
 $('export').onclick=()=>{const columns=['Убакыт','Мектеп','Мугалим','Предмет','Класс','Тема','Жыйынтык','Репродуктивдүү','Продуктивдүү','Креативдүү',...questions.map((_,i)=>`Суроо ${i+1}`)];const rows=visibleRows().map(r=>[r.created_at,schoolName(r.school_id),r.teacher_name,r.subject,r.classroom,r.topic,r.outcome,...(r.counts||[]),...(r.answers||[]).map((v,i)=>questions[i]?.[Number(v)+1]||'')]);const csv='\ufeff'+[columns,...rows].map(row=>row.map(v=>{let s=String(v??'');if(/^[\s]*[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'}).join(';')).join('\r\n');const blob=new Blob([csv.replace('\\ufeff','\ufeff')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='sabak-monitoring.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 loadSchools();
+
+async function isSuperAdmin() {
+  if (!client) return false;
+
+  const { data: userData, error: userError } =
+    await client.auth.getUser();
+
+  if (userError || !userData.user) return false;
+
+  const { data, error } = await client
+    .from('super_admins')
+    .select('user_id')
+    .eq('user_id', userData.user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Укукту текшерүү катасы:', error);
+    return false;
+  }
+
+  return !!data;
+}
