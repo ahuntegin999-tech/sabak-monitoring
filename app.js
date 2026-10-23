@@ -140,6 +140,7 @@ async function checkSession() {
   $('loginCard').classList.toggle('hidden',isAdmin);
   $('dashboard').classList.toggle('hidden',!isAdmin);
   $('superAdminPanel').classList.toggle('hidden',!isSuperAdminUser);
+  $('schoolComparisonPanel').classList.toggle('hidden', !isSuperAdminUser);
   if (isAdmin) { await loadDashboard(); if (isSuperAdminUser) renderManageSchools(); }
   else if (user) $('loginError').textContent = 'Бул аккаунт администратор катары катталган эмес.';
 }
