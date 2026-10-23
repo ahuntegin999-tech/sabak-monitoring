@@ -45,6 +45,19 @@ async function loadSchools() {
     const option = document.createElement('option'); option.value = s.id; option.textContent = s.name; $(id).appendChild(option);
   }
   if ([...$('adminSchool').options].some(o => o.value === previousAdmin)) $('adminSchool').value = previousAdmin;
+  
+  if (isAdmin && !isSuperAdminUser && adminSchoolId !== null) {
+    $('adminSchool').innerHTML = '';
+    const ownSchool = schools.find(s => String(s.id) === adminSchoolId);
+    if (ownSchool) {
+      const option = document.createElement('option');
+      option.value = ownSchool.id;
+      option.textContent = ownSchool.name;
+      $('adminSchool').appendChild(option);
+      $('adminSchool').value = adminSchoolId;
+    }
+  }
+
   if ([...$('schoolSelect').options].some(o => o.value === previousSurvey)) $('schoolSelect').value = previousSurvey;
 }
 if (!client) $('configWarning').classList.remove('hidden');
@@ -137,6 +150,7 @@ async function checkSession() {
   }
   isSuperAdminUser = await isSuperAdmin();
   isAdmin = isAdmin || isSuperAdminUser;
+    await loadSchools();
   $('loginCard').classList.toggle('hidden',isAdmin);
   $('dashboard').classList.toggle('hidden',!isAdmin);
   $('superAdminPanel').classList.toggle('hidden',!isSuperAdminUser);
