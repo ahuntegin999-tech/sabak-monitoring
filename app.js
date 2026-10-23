@@ -288,7 +288,25 @@ $('export').onclick=()=>{
 };
 function renderManageSchools() {
   if(!isSuperAdminUser)return;
-  $('manageSchoolsTable').innerHTML=schools.map(s=>`<tr><td>${escapeHtml(s.name)}</td><td><button type="button" class="secondary smallbtn" data-rename-school="${escapeHtml(s.id)}">Атын өзгөртүү</button></td></tr>`).join('')||'<tr><td colspan="2">Мектеп жок</td></tr>';
+  
+$('manageSchoolsTable').innerHTML = schools.map(s => `
+  <tr>
+    <td>${escapeHtml(s.name)}</td>
+    <td>
+      <button type="button" class="secondary smallbtn"
+        data-rename-school="${escapeHtml(s.id)}">
+        Атын өзгөртүү
+      </button>
+      ${Number(s.id) === 1 ? '' : `
+        <button type="button" class="danger smallbtn"
+          data-delete-school="${escapeHtml(s.id)}">
+          Өчүрүү
+        </button>
+      `}
+    </td>
+  </tr>
+`).join('') || '<tr><td colspan="2">Мектеп жок</td></tr>';
+
 }
 $('addSchoolForm').onsubmit=async event=>{
   event.preventDefault();if(!client||!isSuperAdminUser)return;
@@ -314,4 +332,46 @@ $('manageSchoolsTable').onclick=async event=>{
   }catch(error){$('schoolManageStatus').textContent='Ката: '+error.message;}
   finally{button.disabled=false;}
 };
+
+$('manageSchoolsTable').addEventListener('click', async event => {
+  const button = event.target.closest('[data-delete-school]');
+  if (!button || !client || !isSuperAdminUser) return;
+
+  const school = schools.find(
+    s => String(s.id) === button.dataset.deleteSchool
+  );
+
+  if (!school || Number(school.id) === 1) return;
+
+  const confirmed = confirm(
+    `"${school.name}" мектебин өчүрөсүзбү?\n\n` +
+    'Мектепте талдоолор же администраторлор болсо, өчүрүүгө уруксат берилбейт.'
+  );
+
+  if (!confirmed) return;
+
+  button.disabled = true;
+  $('schoolManageStatus').textContent = '';
+
+  try {
+    const {error} = await client.rpc('admin_delete_school', {
+      target_id: school.id
+    });
+
+    if (error) throw error;
+
+    await loadSchools();
+    renderManageSchools();
+    renderDashboard();
+
+    $('schoolManageStatus').textContent =
+      'Мектеп ийгиликтүү өчүрүлдү.';
+  } catch (error) {
+    $('schoolManageStatus').textContent =
+      'Өчүрүү ишке ашкан жок: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
+});
+
 loadSchools();
