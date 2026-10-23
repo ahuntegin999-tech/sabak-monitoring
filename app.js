@@ -161,7 +161,14 @@ async function checkSession() {
   $('dashboard').classList.toggle('hidden',!isAdmin);
   $('superAdminPanel').classList.toggle('hidden',!isSuperAdminUser);
   $('schoolComparisonPanel').classList.toggle('hidden', !isSuperAdminUser);
-  if (isAdmin) { await loadDashboard(); if (isSuperAdminUser) renderManageSchools(); }
+  if (isAdmin) {
+  await loadDashboard();
+
+  if (isSuperAdminUser) {
+    renderManageSchools();
+    await loadManageAdmins();
+  }
+}
   else if (user) $('loginError').textContent = 'Бул аккаунт администратор катары катталган эмес.';
 }
 $('login').onsubmit = async e => {
