@@ -50,7 +50,53 @@
 <div class="card"><div class="topline"><h3>Бардык талдоолор</h3><button id="export">CSV жүктөө (Excel)</button></div><div class="scroll"><table><thead><tr><th>Убакыт</th><th>Мектеп</th><th>Талдоочу мугалим</th><th>Сабак өткөн мугалим</th><th>Предмет / класс</th><th>Тема</th><th>Жыйынтык</th><th>Жооптор</th><th>Аракет</th></tr></thead><tbody id="records"></tbody></table></div><p id="adminError" class="error" role="alert"></p></div>
 <div id="superAdminPanel" class="hidden">
 <div class="card"><h3>Мектептерди башкаруу</h3><p class="muted">Бул бөлүм башкы администратор үчүн гана.</p><form id="addSchoolForm"><label>Жаңы мектептин аталышы<input id="newSchoolName" required maxlength="200" placeholder="Мисалы: №98 жалпы билим берүү мектеби"></label><button type="submit">Мектеп кошуу</button></form><h3>Мектептердин тизмеси</h3><div class="scroll"><table><thead><tr><th>Мектеп</th><th>Аракет</th></tr></thead><tbody id="manageSchoolsTable"></tbody></table></div><p id="schoolManageStatus" role="status"></p></div>
-<div class="card"><h3>Статистиканы тазалоо</h3><p class="muted">Бул аракет кайтарылбайт. Адегенде CSV көчүрмөсүн сактап алыңыз.</p><button class="danger" id="resetSchool">Тандалган мектептин статистикасын тазалоо</button> <button class="danger" id="resetAll">Бардык статистиканы тазалоо</button><p id="deleteStatus" role="status"></p></div>
+
+<div class="card">
+  <h3>Администраторлорду башкаруу</h3>
+  <p class="muted">
+    Жаңы администраторду электрондук почтасы аркылуу чакырып,
+    мектепке дайындаңыз.
+  </p>
+
+  <form id="addAdminForm">
+    <label>
+      Администратордун электрондук почтасы
+      <input
+        id="newAdminEmail"
+        type="email"
+        required
+        placeholder="example@gmail.com"
+      >
+    </label>
+
+    <label>
+      Мектепти тандаңыз
+      <select id="newAdminSchool" required>
+        <option value="">Мектепти тандаңыз</option>
+      </select>
+    </label>
+
+    <button type="submit">Администратор түзүү</button>
+  </form>
+
+  <p id="adminManageStatus" role="status"></p>
+
+  <h3>Администраторлордун тизмеси</h3>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Электрондук почта</th>
+          <th>Мектеп</th>
+          <th>Аракет</th>
+        </tr>
+      </thead>
+      <tbody id="manageAdminsTable"></tbody>
+    </table>
+  </div>
+</div>
+
+  <div class="card"><h3>Статистиканы тазалоо</h3><p class="muted">Бул аракет кайтарылбайт. Адегенде CSV көчүрмөсүн сактап алыңыз.</p><button class="danger" id="resetSchool">Тандалган мектептин статистикасын тазалоо</button> <button class="danger" id="resetAll">Бардык статистиканы тазалоо</button><p id="deleteStatus" role="status"></p></div>
 </div></div></section>
 <div id="configWarning" class="card notice hidden">Supabase конфигурациясы табылган жок. <b>config.js</b> файлын текшериңиз.</div>
 </main>
