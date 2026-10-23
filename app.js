@@ -40,11 +40,12 @@ async function loadSchools() {
   schools = data || [];
   const previousAdmin = $('adminSchool').value, previousSurvey = $('schoolSelect').value;
   $('schoolSelect').innerHTML = '<option value="">Мектепти тандаңыз</option>';
-  
-$('newAdminSchool').innerHTML = '<option value="">Мектепти тандаңыз</option>';
+
 
   $('adminSchool').innerHTML = '<option value="all">Бардык мектептер</option><option value="none">Мектеби көрсөтүлгөн эмес</option>';
   
+$('newAdminSchool').innerHTML = '<option value="">Мектепти тандаңыз</option>';
+
 for (const s of schools) for (const id of ['schoolSelect','adminSchool','newAdminSchool']) {
 
     const option = document.createElement('option'); option.value = s.id; option.textContent = s.name; $(id).appendChild(option);
