@@ -325,6 +325,48 @@ $('addSchoolForm').onsubmit=async event=>{
   }catch(error){$('schoolManageStatus').textContent='Ката: '+error.message;}
   finally{button.disabled=false;}
 };
+
+$('addAdminForm').onsubmit = async event => {
+  event.preventDefault();
+
+  if (!client || !isSuperAdminUser) return;
+
+  const email = $('newAdminEmail').value.trim();
+  const schoolId = Number($('newAdminSchool').value);
+  const button = $('addAdminForm').querySelector('button[type="submit"]');
+
+  if (!email || !Number.isSafeInteger(schoolId) || schoolId <= 0) return;
+
+  button.disabled = true;
+  $('adminManageStatus').textContent = '';
+
+  try {
+    const { data, error } = await client.functions.invoke(
+      'manage-school-admins',
+      {
+        body: {
+          email: email,
+          school_id: schoolId
+        }
+      }
+    );
+
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+
+    $('newAdminEmail').value = '';
+    $('newAdminSchool').value = '';
+
+    $('adminManageStatus').textContent =
+      'Администраторго чакыруу жөнөтүлдү. Электрондук почтасын текшерсин.';
+  } catch (error) {
+    $('adminManageStatus').textContent =
+      'Ката: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
+};
+
 $('manageSchoolsTable').onclick=async event=>{
   const button=event.target.closest('[data-rename-school]');if(!button||!client||!isSuperAdminUser)return;
   const school=schools.find(s=>String(s.id)===button.dataset.renameSchool);if(!school)return;
