@@ -170,8 +170,17 @@
 <div id="configWarning" class="card notice hidden">Supabase конфигурациясы табылган жок. <b>config.js</b> файлын текшериңиз.</div>
 </main>
 <footer class="site-footer"><blockquote>«Сапаттуу сабак — сапаттуу билимдин башаты, ал эми сапаттуу билим — жаркын келечектин пайдубалы.»</blockquote><small>Бул баалоо — сабактагы байкалган аракеттердин негизинде түзүлгөн методикалык көрсөткүч, расмий аттестация эмес.</small></footer>
+<script>
+// Бул баскыч негизги app.js жүктөлүп бүтө электе да иштейт.
+document.getElementById('forgotPasswordBtn').addEventListener('click', function () {
+  const panel = document.getElementById('forgotPasswordPanel');
+  panel.classList.toggle('hidden');
+  const email = document.querySelector('#cabinetLogin input[name="email"]').value.trim();
+  if (email) document.querySelector('#forgotPasswordForm input[name="email"]').value = email;
+});
+</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=20261024-recovery2"></script>
 </body>
 </html>
