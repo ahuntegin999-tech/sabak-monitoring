@@ -306,6 +306,7 @@ async function checkSession() {
   $('teacherManagementPanel').classList.toggle('hidden', !isAdmin);
   if (isAdmin) {
   await loadDashboard();
+  await loadTeacherManagement();
 
   if (isSuperAdminUser) {
     renderManageSchools();
