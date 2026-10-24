@@ -687,11 +687,7 @@ function showPasswordRecovery() {
   $('teacherAccountLinkPanel').classList.add('hidden');
   $('passwordRecoveryCard').classList.remove('hidden');
 }
-$('forgotPasswordBtn').onclick = () => {
-  $('forgotPasswordPanel').classList.toggle('hidden');
-  const email = $('cabinetLogin').querySelector('[name="email"]').value.trim();
-  if (email) $('forgotPasswordForm').querySelector('[name="email"]').value = email;
-};
+// Сырсөздү калыбына келтирүү панелинин баскычы index.html ичинде өз алдынча иштейт.
 $('forgotPasswordForm').onsubmit = async event => {
   event.preventDefault();
   const status = $('forgotPasswordStatus'); status.textContent = '';
