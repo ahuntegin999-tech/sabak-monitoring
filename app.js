@@ -134,12 +134,16 @@ $('questions').innerHTML = questions.map((q,i) => `<div class="question"><p>${i+
 function tab(which) {
   $('teacher').classList.toggle('hidden',which !== 'teacher');
   $('admin').classList.toggle('hidden',which !== 'admin');
+  $('cabinet').classList.toggle('hidden',which !== 'cabinet');
   $('teacherTab').className = which === 'teacher' ? '' : 'secondary';
   $('adminTab').className = which === 'admin' ? '' : 'secondary';
+  $('cabinetTab').className = which === 'cabinet' ? '' : 'secondary';
   if (which === 'admin') checkSession();
+  if (which === 'cabinet') loadCabinet();
 }
 $('teacherTab').onclick = () => tab('teacher');
 $('adminTab').onclick = () => tab('admin');
+$('cabinetTab').onclick = () => tab('cabinet');
 
 $('survey').onsubmit = async e => {
   e.preventDefault(); $('surveyError').textContent = '';
@@ -532,5 +536,106 @@ $('manageSchoolsTable').addEventListener('click', async event => {
     button.disabled = false;
   }
 });
+
+
+// Жеке кабинет: талдоочунун аты-жөнү жок, сервер чектеген RPC гана колдонулат.
+// Администратордук сессия менен бирдей Supabase Auth колдонулат.
+function cabinetSafeText(value) {
+  if (Array.isArray(value)) return value.map(cabinetSafeText).join(', ');
+  if (value === null || value === undefined || value === '') return '—';
+  return String(value);
+}
+const cabinetObservationLabels = [
+  ['student_count','Катышкан окуучулар'],
+  ['visit_purpose','Катышуунун максаты'],
+  ['teaching_methods','Колдонулган усулдар'],
+  ['organization_level','Сабакты уюштуруу'],
+  ['technology_level','Технологияларды колдонуу'],
+  ['literacy_types','Сабаттуулуктун түрлөрү'],
+  ['steam_components','STEAM компоненттери'],
+  ['pedagogical_level','Педагогикалык кырдаал'],
+  ['reinforcement_level','Бышыктоо жөндөмдүүлүгү'],
+  ['dominant_skill','Басымдуу көндүм'],
+  ['feedback','Сунуштар жана пикирлер']
+];
+function renderCabinetReviews(reviews) {
+  $('cabinetTotal').textContent = reviews.length;
+  $('cabinetRecent').textContent = reviews.filter(r => Date.now() - new Date(r.review_date).getTime() <= 7*86400000).length;
+  if (!reviews.length) {
+    $('cabinetReviews').innerHTML = '<p class="empty">Азырынча сиздин сабактарыңыз боюнча талдоо жок.</p>';
+    return;
+  }
+  $('cabinetReviews').innerHTML = reviews.map(r => {
+    const counts = Array.isArray(r.counts) ? r.counts : [];
+    const answers = Array.isArray(r.answers) ? r.answers : [];
+    const qs = answers.length === 10 ? legacyQuestions : questions;
+    const total = counts.reduce((sum,n) => sum + (Number(n)||0),0);
+    const scores = labels.map((label,i) => {
+      const n = Number(counts[i])||0;
+      const pct = total ? Math.round(n/total*100) : 0;
+      return `<p>${escapeHtml(label)}: <b>${n} (${pct}%)</b></p><div class="bar"><div class="fill" style="width:${pct}%"></div></div>`;
+    }).join('');
+    const details = cabinetObservationLabels.map(([key,label]) =>
+      `<p><b>${escapeHtml(label)}:</b> ${escapeHtml(cabinetSafeText(r.observation?.[key]))}</p>`
+    ).join('');
+    const answerDetails = answers.map((answer,i) =>
+      `<p><b>${i+1}. ${escapeHtml(qs[i]?.[0]||'Критерий')}</b> ${escapeHtml(qs[i]?.[Number(answer)+1]||'—')}</p>`
+    ).join('');
+    return `<article class="card" style="box-shadow:none;border:1px solid #e2e8f0;margin:14px 0">
+      <div class="topline"><h3>${escapeHtml(r.subject||'Предмет көрсөтүлгөн эмес')} — ${escapeHtml(r.classroom||'')}</h3><span class="muted">${escapeHtml(new Date(r.review_date).toLocaleString('ky-KG'))}</span></div>
+      <p><b>Тема:</b> ${escapeHtml(r.topic||'—')}</p>
+      <p><b>Жыйынтык:</b> ${escapeHtml(r.outcome||'—')}</p>
+      ${scores}
+      <details><summary>Толук талдоону жана сунуштарды көрүү</summary>${details}<h4>Критерийлер боюнча жооптор</h4>${answerDetails}</details>
+    </article>`;
+  }).join('');
+}
+async function loadCabinet() {
+  $('cabinetLoginError').textContent = '';
+  if (!client) {
+    $('cabinetLoginError').textContent = 'Supabase конфигурациясын текшериңиз.';
+    return;
+  }
+  const {data:authData,error:authError} = await client.auth.getUser();
+  const signedIn = !authError && !!authData?.user;
+  $('cabinetLoginCard').classList.toggle('hidden',signedIn);
+  $('cabinetDashboard').classList.toggle('hidden',!signedIn);
+  if (!signedIn) return;
+  $('cabinetStatus').textContent = 'Талдоолор жүктөлүүдө...';
+  $('cabinetReviews').replaceChildren();
+  const {data,error} = await client.rpc('get_my_lesson_reviews');
+  if (error) {
+    $('cabinetStatus').textContent = 'Маалыматты жүктөө мүмкүн болгон жок: ' + error.message;
+    return;
+  }
+  const reviews = Array.isArray(data) ? data : [];
+  $('cabinetStatus').textContent = 'Талдоочунун аты-жөнү жеке кабинетте көрсөтүлбөйт.';
+  renderCabinetReviews(reviews);
+}
+$('cabinetLogin').onsubmit = async event => {
+  event.preventDefault();
+  $('cabinetLoginError').textContent = '';
+  if (!client) { $('cabinetLoginError').textContent = 'Supabase конфигурациясы жок.'; return; }
+  const button = $('cabinetLogin').querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const form = new FormData(event.target);
+    const {error} = await client.auth.signInWithPassword({email:form.get('email'),password:form.get('password')});
+    if (error) throw error;
+    event.target.reset();
+    await loadCabinet();
+  } catch(error) {
+    $('cabinetLoginError').textContent = 'Кирүү ишке ашкан жок: ' + error.message;
+  } finally { button.disabled = false; }
+};
+$('cabinetLogout').onclick = async () => {
+  if (!client) return;
+  await client.auth.signOut();
+  all=[];isAdmin=false;isSuperAdminUser=false;adminSchoolId=null;
+  $('cabinetTotal').textContent='0';
+  $('cabinetRecent').textContent='0';
+  $('cabinetReviews').replaceChildren();
+  await loadCabinet();
+};
 
 loadSchools();
