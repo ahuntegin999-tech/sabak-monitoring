@@ -63,6 +63,22 @@
 <button type="submit">Кирүү</button>
 <p id="cabinetLoginError" class="error" role="alert"></p>
 </form>
+<button id="forgotPasswordBtn" type="button" class="secondary">Сырсөздү унуттуңузбу?</button>
+<div id="forgotPasswordPanel" class="hidden" style="margin-top:18px;padding:16px;border:1px solid #d8e0eb;border-radius:10px">
+<h3>Сырсөздү калыбына келтирүү</h3>
+<p class="muted">Катталган электрондук почтаңызды жазыңыз. Жаңы сырсөз орнотуу шилтемеси жөнөтүлөт.</p>
+<form id="forgotPasswordForm"><label>Электрондук почта<input type="email" name="email" autocomplete="email" required></label><button type="submit">Шилтеме жөнөтүү</button></form>
+<p id="forgotPasswordStatus" role="status"></p>
+</div>
+</div>
+<div id="passwordRecoveryCard" class="card hidden">
+<h2>Жаңы сырсөз орнотуу</h2>
+<p class="muted">Электрондук почтаңыздагы калыбына келтирүү шилтемеси аркылуу келдиңиз. Жаңы сырсөздү киргизиңиз.</p>
+<form id="passwordRecoveryForm">
+<label>Жаңы сырсөз (кеминде 8 белги)<input type="password" name="password" minlength="8" autocomplete="new-password" required></label>
+<label>Жаңы сырсөздү кайталаңыз<input type="password" name="confirm" minlength="8" autocomplete="new-password" required></label>
+<button type="submit">Жаңы сырсөздү сактоо</button>
+</form><p id="passwordRecoveryStatus" role="status"></p>
 </div>
 <div id="teacherAccountLinkPanel" class="card hidden"><h3>Мугалимдин аккаунтун байланыштыруу</h3><p class="muted">Өз мектебиңизди жана аты-жөнүңүздү тандап, администраторго арыз жөнөтүңүз. Администратор сиздин ким экениңизди текшерет.</p><label>Мектеп<select id="requestSchool"><option value="">Мектепти тандаңыз</option></select></label><label>Мугалим<select id="requestTeacher"><option value="">Мугалимди тандаңыз</option></select></label><button id="submitTeacherLinkRequest" type="button">Арыз жөнөтүү</button><p id="teacherLinkStatus" role="status"></p></div>
 <div id="cabinetDashboard" class="hidden">
