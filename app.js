@@ -72,6 +72,12 @@ for (const s of schools) for (const id of ['schoolSelect','adminSchool','newAdmi
 let directory = {teachers:[], subjects:[], classes:[]};
 let directoryRequest = 0;
 let testModeAuthorized = false;
+let myTeacherProfile = null;
+let sessionUser = null;
+let observerTeachers = [];
+let managedTeachers = [];
+let managedSubjects = [];
+let manageRequest = 0;
 const testModeEnabled = () => testModeAuthorized && $('testModeToggle').checked && Number($('schoolSelect').value) === 1;
 async function updateTestModeAccess() {
   testModeAuthorized = false;
@@ -108,36 +114,77 @@ function fillDirectorySelect(id, rows, label, nameKey='name') {
   select.replaceChildren(new Option(label, ''));
   for (const row of rows) select.add(new Option(row[nameKey], String(row.id)));
 }
+async function updateSurveyAccess() {
+  if (!client) return;
+  const {data} = await client.auth.getUser();
+  sessionUser = data?.user || null;
+  myTeacherProfile = null;
+  if (sessionUser) {
+    const profile = await client.rpc('get_my_teacher_profile');
+    if (!profile.error) myTeacherProfile = profile.data || null;
+  }
+  const allowed = !!sessionUser && (isAdmin || testModeAuthorized || !!myTeacherProfile);
+  $('surveyAuthNotice').classList.toggle('hidden', allowed);
+  $('surveyAuthNotice').textContent = sessionUser
+    ? 'Аккаунтуңуз мугалимдин профилине байланыштырылган эмес. Администраторго кайрылыңыз.'
+    : 'Талдоо жүргүзүү үчүн «Жеке кабинет» же «Администратор» бөлүмүнөн аккаунтуңузга кириңиз.';
+  $('submitBtn').disabled = !allowed;
+  return allowed;
+}
 async function refreshDirectory() {
   const request = ++directoryRequest;
   const schoolId = Number($('schoolSelect').value);
   $('directoryStatus').textContent = '';
   $('testModePanel').classList.toggle('hidden', !testModeAuthorized || schoolId !== 1);
-  if (schoolId !== 1) { $('testModeToggle').checked = false; setLegacyMode(true); return; }
-  setLegacyMode(false);
-  for (const id of directorySelects) $(id).disabled = true;
-  $('directoryStatus').textContent = 'Мугалимдер, предметтер жана класстар жүктөлүүдө...';
-  if (!client) { $('directoryStatus').textContent = 'Supabase конфигурациясы жок.'; return; }
-  const {data,error} = testModeEnabled()
-    ? await client.rpc('get_test_observation_directory', {p_school_id: schoolId})
-    : await client.rpc('get_observation_directory', {p_school_id: schoolId});
-  if (request !== directoryRequest) return;
-  if (error) {
-    $('directoryStatus').textContent = 'Тизмелер жүктөлгөн жок. Алгач архивдеги SQL файлын Supabase SQL Editor аркылуу иштетиңиз. Ката: ' + error.message;
+  if (schoolId !== 1) {
+    $('testModeToggle').checked = false;
+    setLegacyMode(true);
+    $('directoryStatus').textContent = 'Бул мектептин мугалимдер каталогу азырынча даяр эмес. Талдоо жөнөтүү убактылуу жеткиликсиз.';
+    $('submitBtn').disabled = true;
     return;
   }
+  setLegacyMode(false);
+  for (const id of directorySelects) $(id).disabled = true;
+  $('directoryStatus').textContent = 'Тизмелер жүктөлүүдө...';
+  if (!client) return;
+  const test = testModeEnabled();
+  const [mainResult, observerResult] = await Promise.all([
+    client.rpc(test ? 'get_test_observation_directory' : 'get_observation_directory', {p_school_id: schoolId}),
+    test ? client.rpc('get_observation_directory', {p_school_id: schoolId}) : Promise.resolve(null)
+  ]);
+  if (request !== directoryRequest) return;
+  if (mainResult.error || observerResult?.error) {
+    $('directoryStatus').textContent = 'Каталог жүктөлгөн жок: ' + (mainResult.error || observerResult.error).message;
+    return;
+  }
+  const data = mainResult.data;
   directory = {
-    teachers: Array.isArray(data?.teachers) ? data.teachers : [],
-    subjects: Array.isArray(data?.subjects) ? data.subjects : [],
-    classes: Array.isArray(data?.classes) ? data.classes : []
+    teachers:Array.isArray(data?.teachers)?data.teachers:[],
+    subjects:Array.isArray(data?.subjects)?data.subjects:[],
+    classes:Array.isArray(data?.classes)?data.classes:[]
   };
-  fillDirectorySelect('teacherSelect',directory.teachers,'Талдоочу мугалимди тандаңыз','full_name');
+  observerTeachers = test ? (Array.isArray(observerResult.data?.teachers) ? observerResult.data.teachers : []) : directory.teachers;
+  fillDirectorySelect('teacherSelect', observerTeachers, 'Талдоочу мугалимди тандаңыз', 'full_name');
   fillDirectorySelect('observedTeacherSelect',directory.teachers,'Сабак өткөн мугалимди тандаңыз','full_name');
   fillDirectorySelect('subjectSelect',directory.subjects,'Предметти тандаңыз');
   fillDirectorySelect('classSelect',directory.classes,'Классты тандаңыз');
-  const complete = directory.teachers.length && directory.subjects.length && directory.classes.length;
+  const complete = observerTeachers.length && directory.teachers.length && directory.subjects.length && directory.classes.length;
   for (const id of directorySelects) $(id).disabled = !complete;
-  $('directoryStatus').textContent = complete ? (testModeEnabled() ? 'ТЕСТТИК РЕЖИМ: жыйынтыктар расмий статистикага кирбейт.' : 'Тизмелер даяр. Тест мугалим жана тест предмет расмий тандоодон жашырылган.') : 'Тизмелер толук эмес. Supabase маалыматтарын текшериңиз.';
+  const privileged = isAdmin || testModeAuthorized;
+  if (!privileged) {
+    if (myTeacherProfile && Number(myTeacherProfile.school_id) === schoolId && myTeacherProfile.is_active) {
+      const mine = observerTeachers.find(t => Number(t.id) === Number(myTeacherProfile.id));
+      if (mine) {
+        $('teacherSelect').value = String(mine.id);
+        $('teacherSelect').disabled = true;
+        $('directoryStatus').textContent = 'Талдоочу: ' + mine.full_name + ' (өзгөртүүгө болбойт).';
+      } else $('directoryStatus').textContent = 'Өзүңүздүн атыңыз каталогдон табылган жок.';
+    } else $('directoryStatus').textContent = 'Мугалимдин аккаунту бул мектепке байланыштырылган эмес.';
+  } else {
+    $('directoryStatus').textContent = test ? 'ТЕСТТИК РЕЖИМ: талдоочу кадимки мугалимдерден тандалат.' : 'Тизмелер даяр.';
+  }
+  await updateSurveyAccess();
+  if (schoolId !== 1) $('submitBtn').disabled = true;
 }
 $('schoolSelect').addEventListener('change', refreshDirectory);
 
@@ -170,7 +217,10 @@ $('cabinetTab').onclick = () => tab('cabinet');
 $('survey').onsubmit = async e => {
   e.preventDefault(); $('surveyError').textContent = '';
   if (!client) { $('surveyError').textContent = 'Онлайн база азырынча орнотулган эмес.'; return; }
+  const allowed = await updateSurveyAccess();
+  if (!allowed || Number($('schoolSelect').value) !== 1) { $('surveyError').textContent = 'Бул мектеп үчүн аккаунт менен каталог даяр болушу керек.'; return; }
   const form = new FormData(e.target);
+  if ($('teacherSelect').disabled && myTeacherProfile && !isAdmin && !testModeAuthorized) form.set('teacher_id', String(myTeacherProfile.id));
   const answers = questions.map((_,i) => form.get('q'+i) === null ? NaN : Number(form.get('q'+i)));
   const schoolId = Number(form.get('school_id'));
   if (!schools.some(s => Number(s.id) === schoolId)) { $('surveyError').textContent = 'Мектепти тандаңыз.'; return; }
@@ -184,8 +234,9 @@ $('survey').onsubmit = async e => {
   const outcome = winners.length === 1 ? winners[0] : 'Аралаш: ' + winners.join(' / ');
   const useDirectory = schoolId === 1;
   const submittingTest = testModeEnabled();
+  if (!isAdmin && !testModeAuthorized && (!myTeacherProfile || Number(myTeacherProfile.school_id) !== schoolId)) { $('surveyError').textContent = 'Бул мектептин мугалими катары аккаунтуңуз байланышкан эмес.'; return; }
   const getSelected = (id, rows) => rows.find(x => String(x.id) === String(form.get(id)));
-  const observer = useDirectory ? getSelected('teacher_id',directory.teachers) : null;
+  const observer = useDirectory ? getSelected('teacher_id',observerTeachers) : null;
   const observed = useDirectory ? getSelected('observed_teacher_id',directory.teachers) : null;
   const selectedSubject = useDirectory ? getSelected('subject_id',directory.subjects) : null;
   const selectedClass = useDirectory ? getSelected('class_id',directory.classes) : null;
@@ -252,6 +303,7 @@ async function checkSession() {
   $('dashboard').classList.toggle('hidden',!isAdmin);
   $('superAdminPanel').classList.toggle('hidden',!isSuperAdminUser);
   $('schoolComparisonPanel').classList.toggle('hidden', !isSuperAdminUser);
+  $('teacherManagementPanel').classList.toggle('hidden', !isAdmin);
   if (isAdmin) {
   await loadDashboard();
 
@@ -271,7 +323,7 @@ $('login').onsubmit = async e => {
   await checkSession();
   await updateTestModeAccess();
 };
-$('logout').onclick = async () => { await client?.auth.signOut(); all=[]; isAdmin=false; isSuperAdminUser=false; adminSchoolId=null; $('loginError').textContent=''; await checkSession(); await updateTestModeAccess(); };
+$('logout').onclick = async () => { await client?.auth.signOut(); all=[]; isAdmin=false; isSuperAdminUser=false; adminSchoolId=null; $('loginError').textContent=''; await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); };
 async function loadDashboard() {
   try {
     $('adminError').textContent = ''; all=[]; let start=0;
@@ -648,8 +700,10 @@ $('cabinetLogin').onsubmit = async event => {
     const {error} = await client.auth.signInWithPassword({email:form.get('email'),password:form.get('password')});
     if (error) throw error;
     event.target.reset();
+    await checkSession();
     await loadCabinet();
     await updateTestModeAccess();
+    await updateSurveyAccess();
   } catch(error) {
     $('cabinetLoginError').textContent = 'Кирүү ишке ашкан жок: ' + error.message;
   } finally { button.disabled = false; }
@@ -663,6 +717,90 @@ $('cabinetLogout').onclick = async () => {
   $('cabinetReviews').replaceChildren();
   await loadCabinet();
   await updateTestModeAccess();
+  await updateSurveyAccess();
 };
 
-loadSchools().then(updateTestModeAccess);
+
+// Мугалимдерди башкаруу: бардык жазуулар сервердин коопсуз RPC функциялары аркылуу.
+async function loadTeacherManagement() {
+  if (!client || !isAdmin) return;
+  const select = $('manageTeacherSchool');
+  const previous = select.value;
+  select.replaceChildren(new Option('Мектепти тандаңыз', ''));
+  const allowedSchools = isSuperAdminUser ? schools : schools.filter(s => String(s.id) === adminSchoolId);
+  for (const s of allowedSchools) select.add(new Option(s.name, String(s.id)));
+  if (allowedSchools.some(s => String(s.id) === previous)) select.value = previous;
+  else if (allowedSchools.length === 1) select.value = String(allowedSchools[0].id);
+  else if (allowedSchools.length) select.value = String(allowedSchools[0].id);
+  await refreshManagedTeachers();
+}
+async function refreshManagedTeachers() {
+  const request = ++manageRequest;
+  const schoolId = Number($('manageTeacherSchool').value);
+  if (!isAdmin || !schoolId) return;
+  $('teacherManageStatus').textContent = 'Мугалимдер жүктөлүүдө...';
+  const {data,error} = await client.rpc('admin_list_teachers', {p_school_id:schoolId});
+  if (request !== manageRequest) return;
+  if (error) { $('teacherManageStatus').textContent = 'Ката: ' + error.message; return; }
+  managedTeachers = Array.isArray(data?.teachers) ? data.teachers : [];
+  managedSubjects = Array.isArray(data?.subjects) ? data.subjects : [];
+  $('teacherSubjectChecks').replaceChildren();
+  for (const subject of managedSubjects) {
+    const label = document.createElement('label');
+    const input = document.createElement('input'); input.type='checkbox';input.value=String(subject.id);input.name='managed_subject';
+    label.append(input,document.createTextNode(subject.name));
+    $('teacherSubjectChecks').append(label);
+  }
+  clearTeacherEditor();
+  renderManagedTeachers();
+  $('teacherManageStatus').textContent = 'Мугалимдер: ' + managedTeachers.length;
+}
+function renderManagedTeachers() {
+  const q = $('manageTeacherSearch').value.trim().toLocaleLowerCase();
+  const rows = managedTeachers.filter(t => [t.full_name,t.position].some(x => String(x||'').toLocaleLowerCase().includes(q)));
+  $('manageTeachersTable').innerHTML = rows.map(t => `<tr><td>${escapeHtml(t.full_name)}</td><td>${escapeHtml(t.position||'—')}</td><td>${escapeHtml((t.subjects||[]).map(s=>s.name).join(', ')||'—')}</td><td>${t.has_account?'Байланган':'Байланган эмес'}</td><td>${t.is_active?'Активдүү':'Активдүү эмес'}</td><td><button type="button" class="secondary smallbtn" data-edit-teacher="${escapeHtml(t.id)}">Оңдоо</button></td></tr>`).join('') || '<tr><td colspan="6">Мугалим табылган жок</td></tr>';
+}
+function clearTeacherEditor() {
+  $('teacherManageForm').reset();
+  $('editTeacherId').value='';
+  $('editTeacherActive').checked=true;
+  $('teacherEditorTitle').textContent='Мугалим кошуу';
+}
+$('manageTeacherSchool').onchange = refreshManagedTeachers;
+$('manageTeacherSearch').oninput = renderManagedTeachers;
+$('cancelTeacherEdit').onclick = clearTeacherEditor;
+$('manageTeachersTable').onclick = e => {
+  const button=e.target.closest('[data-edit-teacher]'); if(!button)return;
+  const t=managedTeachers.find(x=>String(x.id)===button.dataset.editTeacher);if(!t)return;
+  $('editTeacherId').value=String(t.id);
+  $('editTeacherName').value=t.full_name;
+  $('editTeacherPosition').value=t.position||'';
+  $('editTeacherActive').checked=!!t.is_active;
+  const ids=new Set((t.subjects||[]).map(s=>String(s.id)));
+  for(const input of $('teacherSubjectChecks').querySelectorAll('input')) input.checked=ids.has(input.value);
+  $('teacherEditorTitle').textContent='Мугалимди оңдоо: '+t.full_name;
+  $('teacherManageForm').scrollIntoView({behavior:'smooth',block:'start'});
+};
+$('teacherManageForm').onsubmit = async e => {
+  e.preventDefault();if(!isAdmin||!client)return;
+  const button=$('saveTeacherBtn');button.disabled=true;
+  $('teacherManageStatus').textContent='Сакталууда...';
+  try {
+    const teacherId=$('editTeacherId').value;
+    const {data,error}=await client.rpc('admin_save_teacher', {
+      p_school_id:Number($('manageTeacherSchool').value),
+      p_teacher_id:teacherId ? Number(teacherId) : null,
+      p_full_name:$('editTeacherName').value.trim(),
+      p_position:$('editTeacherPosition').value.trim(),
+      p_is_active:$('editTeacherActive').checked,
+      p_subject_ids:[...$('teacherSubjectChecks').querySelectorAll('input:checked')].map(x=>Number(x.value))
+    });
+    if(error)throw error;
+    await refreshManagedTeachers();
+    $('teacherManageStatus').textContent='Мугалим сакталды (ID: '+data+').';
+    if(Number($('schoolSelect').value)===Number($('manageTeacherSchool').value)) await refreshDirectory();
+  }catch(error){$('teacherManageStatus').textContent='Сактоо катасы: '+error.message;}
+  finally{button.disabled=false;}
+};
+
+loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); });
