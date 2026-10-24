@@ -83,6 +83,16 @@
 <div id="teacherAccountLinkPanel" class="card hidden"><h3>Мугалимдин аккаунтун байланыштыруу</h3><p class="muted">Өз мектебиңизди жана аты-жөнүңүздү тандап, администраторго арыз жөнөтүңүз. Администратор сиздин ким экениңизди текшерет.</p><label>Мектеп<select id="requestSchool"><option value="">Мектепти тандаңыз</option></select></label><label>Мугалим<select id="requestTeacher"><option value="">Мугалимди тандаңыз</option></select></label><button id="submitTeacherLinkRequest" type="button">Арыз жөнөтүү</button><p id="teacherLinkStatus" role="status"></p></div>
 <div id="cabinetDashboard" class="hidden">
 <div class="card topline"><div><h2>Менин сабак талдоолорум</h2><p class="muted">Баалоолор жана сунуштар. Талдоочунун аты-жөнү көрсөтүлбөйт.</p></div><button id="cabinetLogout" class="secondary">Аккаунттан чыгуу</button></div>
+  <div class="card">
+    <h3>Өз сырсөзүмдү өзгөртүү</h3>
+    <p class="muted">Жеке кабинетиңизге кирип турганда сырсөзүңүздү өзүңүз жаңырта аласыз. Жаңы сырсөздү эч кимге айтпаңыз.</p>
+    <form id="changeOwnPasswordForm">
+      <label>Жаңы сырсөз (кеминде 12 белги)<input id="ownNewPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+      <label>Жаңы сырсөздү кайталаңыз<input id="ownConfirmPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+      <button type="submit" id="changeOwnPasswordBtn">Сырсөзүмдү өзгөртүү</button>
+    </form>
+    <p id="changeOwnPasswordStatus" role="status" aria-live="polite"></p>
+  </div>
 <div class="card"><div class="stats"><div class="stat"><strong id="cabinetTotal">0</strong>Жалпы талдоо</div><div class="stat"><strong id="cabinetRecent">0</strong>Акыркы 7 күн</div></div><p id="cabinetStatus" class="muted" role="status"></p><div id="cabinetReviews"></div></div>
 </div>
 </section>
@@ -198,6 +208,6 @@ window.__sabakRecoveryCallback = /(?:[?#&])(?:code|access_token|token_hash)=/.te
 </script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=20261024-admin-reset1"></script>
+<script src="app.js?v=20261024-own-password2"></script>
 </body>
 </html>
