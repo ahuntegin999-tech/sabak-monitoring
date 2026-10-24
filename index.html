@@ -11,7 +11,7 @@
 <body>
 <header><h1>Өз ара сабакка кирүү</h1><p>5 негизги критерий • 3 деңгээл • Онлайн мониторинг</p></header>
 <main>
-<div class="tabs"><button id="teacherTab">Мугалим үчүн</button><button class="secondary" id="adminTab">Администратор</button></div>
+<div class="tabs"><button id="teacherTab">Мугалим үчүн</button><button class="secondary" id="adminTab">Администратор</button><button class="secondary" id="cabinetTab">Жеке кабинет</button></div>
 <section id="teacher">
 <div class="card">
 <h2>Сабак тууралуу маалымат</h2>
@@ -43,6 +43,23 @@
 <p class="muted">Ар бир суроого сабакта иш жүзүндө байкалган аракетке ылайык бир жооп тандаңыз.</p>
 <button id="submitBtn" type="submit">Жыйынтыкты эсептөө жана сактоо</button><p id="surveyError" class="error" role="alert"></p>
 </form></div><div id="result" class="card hidden" aria-live="polite"></div>
+</section>
+<section id="cabinet" class="hidden">
+<div id="cabinetLoginCard" class="card">
+<h2>Мугалимдин жеке кабинети</h2>
+<p class="muted">Мугалим өзүнө тиешелүү сабак талдоолорун гана көрөт. Талдоочунун аты-жөнү жашыруун сакталат.</p>
+<p id="cabinetSessionNotice" class="muted"></p>
+<form id="cabinetLogin">
+<label>Электрондук почта<input type="email" name="email" autocomplete="username" required></label>
+<label>Сырсөз<input type="password" name="password" autocomplete="current-password" required></label>
+<button type="submit">Кирүү</button>
+<p id="cabinetLoginError" class="error" role="alert"></p>
+</form>
+</div>
+<div id="cabinetDashboard" class="hidden">
+<div class="card topline"><div><h2>Менин сабак талдоолорум</h2><p class="muted">Баалоолор жана сунуштар. Талдоочунун аты-жөнү көрсөтүлбөйт.</p></div><button id="cabinetLogout" class="secondary">Аккаунттан чыгуу</button></div>
+<div class="card"><div class="stats"><div class="stat"><strong id="cabinetTotal">0</strong>Жалпы талдоо</div><div class="stat"><strong id="cabinetRecent">0</strong>Акыркы 7 күн</div></div><p id="cabinetStatus" class="muted" role="status"></p><div id="cabinetReviews"></div></div>
+</div>
 </section>
 <section id="admin" class="hidden">
 <div id="loginCard" class="card"><h2>Администратордук кирүү</h2><p class="muted">Администратордун электрондук почтасы жана сырсөзү талап кылынат.</p><form id="login"><label>Email<input type="email" name="email" required autocomplete="username"></label><label>Сырсөз<input type="password" name="password" required autocomplete="current-password"></label><button type="submit">Кирүү</button><p id="loginError" class="error" role="alert"></p></form></div>
