@@ -672,7 +672,17 @@ function renderCabinetReviews(reviews) {
 }
 // Калыбына келтирүү шилтемеси аркылуу кирген учурда кадимки кабинетти жашырабыз.
 let passwordRecoveryMode = false;
-const recoveryLinkHint = /(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
+// Supabase URL'деги recovery белгисин сессияны иштеткенде өчүрүшү мүмкүн.
+// Ошондуктан белги index.html'деги алгачкы скриптте сакталат.
+const recoveryLinkHint = !!window.__sabakRecoveryLink || /(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
+const recoveryPendingKey = 'sabak-password-recovery-request';
+const recoveryFromPendingLink = (() => {
+  try {
+    const sent = Number(sessionStorage.getItem(recoveryPendingKey) || 0);
+    const hasAuthCallback = /(?:[?#&])(?:code|access_token|token_hash)=/.test(window.location.href) || !!window.__sabakRecoveryCallback;
+    return hasAuthCallback && sent > 0 && Date.now() - sent < 60 * 60 * 1000;
+  } catch (_) { return false; }
+})();
 if (client) {
   client.auth.onAuthStateChange((event) => {
     if (event === 'PASSWORD_RECOVERY') {
@@ -698,6 +708,7 @@ $('forgotPasswordForm').onsubmit = async event => {
     const redirectTo = window.location.origin + window.location.pathname;
     const {error} = await client.auth.resetPasswordForEmail(email, {redirectTo});
     if (error) throw error;
+    try { sessionStorage.setItem(recoveryPendingKey, String(Date.now())); } catch (_) {}
     status.textContent = 'Эгер бул почта катталган болсо, сырсөздү калыбына келтирүү шилтемеси жөнөтүлөт. Почтаңызды жана Спам папкасын текшериңиз.';
   } catch (error) { status.textContent = 'Шилтемени жөнөтүү катасы: ' + error.message; }
   finally { button.disabled = false; }
@@ -716,6 +727,7 @@ $('passwordRecoveryForm').onsubmit = async event => {
     event.target.reset();
     await client.auth.signOut();
     passwordRecoveryMode = false;
+    try { sessionStorage.removeItem(recoveryPendingKey); } catch (_) {}
     history.replaceState(null, '', window.location.pathname);
     $('passwordRecoveryCard').classList.add('hidden');
     $('cabinetLoginCard').classList.remove('hidden');
@@ -734,7 +746,7 @@ async function loadCabinet() {
   }
   const {data:authData,error:authError} = await client.auth.getUser();
   const signedIn = !authError && !!authData?.user;
-  if (signedIn && (passwordRecoveryMode || recoveryLinkHint)) {
+  if (signedIn && (passwordRecoveryMode || recoveryLinkHint || recoveryFromPendingLink)) {
     passwordRecoveryMode = true;
     showPasswordRecovery();
     return;
@@ -999,4 +1011,4 @@ $('accountRequestsTable').onclick = async event => {
   } catch(error) { $('accountApprovalStatus').textContent = 'Ката: ' + error.message; button.disabled = false; }
 };
 
-loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || passwordRecoveryMode) tab('cabinet'); });
+loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || recoveryFromPendingLink || passwordRecoveryMode) tab('cabinet'); });
