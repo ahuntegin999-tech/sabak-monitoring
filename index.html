@@ -179,8 +179,13 @@ document.getElementById('forgotPasswordBtn').addEventListener('click', function 
   if (email) document.querySelector('#forgotPasswordForm input[name="email"]').value = email;
 });
 </script>
+<script>
+// URL'деги recovery маалыматын Supabase аны өзгөрткөнгө чейин сактайбыз.
+window.__sabakRecoveryLink = /(?:[?#&])type=recovery(?:&|$)/.test(location.href);
+window.__sabakRecoveryCallback = /(?:[?#&])(?:code|access_token|token_hash)=/.test(location.href);
+</script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=20261024-recovery2"></script>
+<script src="app.js?v=20261024-recovery3"></script>
 </body>
 </html>
