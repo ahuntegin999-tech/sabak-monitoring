@@ -789,6 +789,34 @@ $('cabinetLogin').onsubmit = async event => {
     $('cabinetLoginError').textContent = 'Кирүү ишке ашкан жок: ' + error.message;
   } finally { button.disabled = false; }
 };
+// Жеке кабинет: кирген колдонуучу өзүнүн гана сырсөзүн Supabase Auth аркылуу өзгөртөт.
+$('changeOwnPasswordForm').onsubmit = async event => {
+  event.preventDefault();
+  const status = $('changeOwnPasswordStatus');
+  const button = $('changeOwnPasswordBtn');
+  status.textContent = '';
+  if (!client) { status.textContent = 'Сервиске байланыш жок.'; return; }
+  const password = $('ownNewPassword').value;
+  const confirmPassword = $('ownConfirmPassword').value;
+  if (password.length < 12 || password.length > 128) {
+    status.textContent = 'Сырсөз 12–128 белгиден турушу керек.'; return;
+  }
+  if (password !== confirmPassword) {
+    status.textContent = 'Сырсөздөр дал келген жок.'; return;
+  }
+  button.disabled = true;
+  status.textContent = 'Сырсөз жаңыртылууда...';
+  try {
+    const {data:authData,error:authError} = await client.auth.getUser();
+    if (authError || !authData?.user) throw new Error('Адегенде жеке кабинетиңизге кириңиз.');
+    const {error} = await client.auth.updateUser({password});
+    if (error) throw error;
+    event.target.reset();
+    status.textContent = 'Сырсөзүңүз ийгиликтүү өзгөртүлдү. Кийинки кирүүдө жаңы сырсөздү колдонуңуз.';
+  } catch(error) {
+    status.textContent = 'Сырсөз өзгөргөн жок: ' + error.message;
+  } finally { button.disabled = false; }
+};
 $('cabinetLogout').onclick = async () => {
   if (!client) return;
   await client.auth.signOut();
