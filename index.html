@@ -18,6 +18,10 @@
 <p class="muted">Анкета сабакты байкоо үчүн арналган. №97 мектепте мугалимди, предметти жана классты тизмеден тандаңыз. Жооптор администрацияга көрүнөт.</p>
 <form id="survey">
 <label>Мектепти тандаңыз *<select name="school_id" id="schoolSelect" required><option value="">Мектепти тандаңыз</option></select></label>
+<div id="testModePanel" class="card hidden" style="background:#fff6d9;border:1px solid #efd787;padding:14px">
+<label style="display:flex;align-items:center;gap:10px"><input id="testModeToggle" type="checkbox" style="width:auto;margin:0"> Тесттик режим (администратор үчүн)</label>
+<p class="muted" style="margin-bottom:0">Тесттик мугалим жана предмет колдонулат. Бул талдоолор расмий статистикага кошулбайт.</p>
+</div>
 <div id="directoryFields" class="hidden">
 <label>Сабакка катышып, талдоо жүргүзгөн мугалим *<select id="teacherSelect" name="teacher_id" required disabled><option value="">Мугалимди тандаңыз</option></select></label>
 <label>Сабак өткөн мугалим *<select id="observedTeacherSelect" name="observed_teacher_id" required disabled><option value="">Мугалимди тандаңыз</option></select></label>
