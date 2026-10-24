@@ -308,6 +308,7 @@ async function checkSession() {
   if (isAdmin) {
   await loadDashboard();
   await loadTeacherManagement();
+  await loadAccountApprovals();
 
   if (isSuperAdminUser) {
     renderManageSchools();
