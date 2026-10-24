@@ -304,10 +304,12 @@ async function checkSession() {
   $('superAdminPanel').classList.toggle('hidden',!isSuperAdminUser);
   $('schoolComparisonPanel').classList.toggle('hidden', !isSuperAdminUser);
   $('teacherManagementPanel').classList.toggle('hidden', !isAdmin);
+  $('passwordAdminPanel').classList.toggle('hidden', !isAdmin);
   $('accountApprovalPanel').classList.toggle('hidden', !isAdmin);
   if (isAdmin) {
   await loadDashboard();
   await loadTeacherManagement();
+  await loadPasswordResetSchools();
   await loadAccountApprovals();
 
   if (isSuperAdminUser) {
@@ -1009,6 +1011,66 @@ $('accountRequestsTable').onclick = async event => {
     await refreshManagedTeachers();
     $('accountApprovalStatus').textContent = approve ? 'Арыз бекитилди, аккаунт байланыштырылды.' : 'Арыз четке кагылды.';
   } catch(error) { $('accountApprovalStatus').textContent = 'Ката: ' + error.message; button.disabled = false; }
+};
+
+
+// Сырсөздү жаңыртуу: сервер мугалимдин ID'си жана администратордун мектеби боюнча текшерет.
+async function loadPasswordResetSchools() {
+  if (!client || !isAdmin) return;
+  const select = $('resetTeacherSchool');
+  const previous = select.value;
+  const permitted = isSuperAdminUser ? schools : schools.filter(s => String(s.id) === adminSchoolId);
+  select.replaceChildren(new Option('Мектепти тандаңыз', ''));
+  for (const school of permitted) select.add(new Option(school.name, String(school.id)));
+  if (permitted.some(s => String(s.id) === previous)) select.value = previous;
+  else if (permitted.length) select.value = String(permitted[0].id);
+  await loadPasswordResetTeachers();
+}
+async function loadPasswordResetTeachers() {
+  const schoolId = Number($('resetTeacherSchool').value);
+  const select = $('resetTeacherId');
+  select.replaceChildren(new Option('Мугалимди тандаңыз', ''));
+  if (!client || !isAdmin || !schoolId) return;
+  $('resetTeacherStatus').textContent = 'Мугалимдер жүктөлүүдө...';
+  const {data,error} = await client.rpc('admin_list_teachers',{p_school_id:schoolId});
+  if (error) { $('resetTeacherStatus').textContent = 'Тизме жүктөлгөн жок: '+error.message; return; }
+  for (const teacher of (data?.teachers || [])) {
+    if (teacher.has_account && teacher.is_active) select.add(new Option(teacher.full_name, String(teacher.id)));
+  }
+  $('resetTeacherStatus').textContent = 'Аккаунту байланышкан активдүү мугалимдер гана көрсөтүлөт.';
+}
+$('resetTeacherSchool').onchange = loadPasswordResetTeachers;
+$('adminPasswordResetForm').onsubmit = async event => {
+  event.preventDefault();
+  if (!client || !isAdmin) return;
+  const status = $('resetTeacherStatus');
+  const teacherId = Number($('resetTeacherId').value);
+  const password = $('resetTeacherPassword').value;
+  if (!Number.isSafeInteger(teacherId) || teacherId <= 0) { status.textContent='Мугалимди тандаңыз.'; return; }
+  if (password.length < 12 || password.length > 128 || password !== $('resetTeacherPasswordConfirm').value) {
+    status.textContent = 'Сырсөздөр дал келген жана кеминде 12 белгиден турушу керек.'; return;
+  }
+  if (!$('resetTeacherConsent').checked) { status.textContent = 'Мугалимдин макулдугун ырастоо талап кылынат.'; return; }
+  const teacherName = $('resetTeacherId').selectedOptions[0]?.textContent || '';
+  if (!confirm(teacherName+' мугалиминин сырсөзүн жаңыртасызбы?')) return;
+  const button = $('resetTeacherSubmit'); button.disabled=true;
+  status.textContent='Сырсөз жаңыртылууда...';
+  try {
+    const {data,error} = await client.functions.invoke('admin-password-reset', {
+      body:{teacher_id:teacherId,new_password:password,teacher_consent:true}
+    });
+    if (error) {
+      let message=error.message;
+      if (error.context) { try { const detail=await error.context.json(); message=detail.error || detail.message || message; } catch (_) {} }
+      throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+    $('resetTeacherPassword').value='';
+    $('resetTeacherPasswordConfirm').value='';
+    $('resetTeacherConsent').checked=false;
+    status.textContent='Сырсөз жаңыртылды. Убактылуу сырсөздү мугалимге коопсуз жол менен бериңиз.';
+  } catch (error) { status.textContent='Жаңыртуу катасы: '+error.message; }
+  finally { button.disabled=false; }
 };
 
 loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || recoveryFromPendingLink || passwordRecoveryMode) tab('cabinet'); });
