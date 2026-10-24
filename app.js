@@ -670,6 +670,66 @@ function renderCabinetReviews(reviews) {
     </article>`;
   }).join('');
 }
+// Калыбына келтирүү шилтемеси аркылуу кирген учурда кадимки кабинетти жашырабыз.
+let passwordRecoveryMode = false;
+const recoveryLinkHint = /(?:[?#&])type=recovery(?:&|$)/.test(window.location.href);
+if (client) {
+  client.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      passwordRecoveryMode = true;
+      queueMicrotask(() => tab('cabinet'));
+    }
+  });
+}
+function showPasswordRecovery() {
+  $('cabinetLoginCard').classList.add('hidden');
+  $('cabinetDashboard').classList.add('hidden');
+  $('teacherAccountLinkPanel').classList.add('hidden');
+  $('passwordRecoveryCard').classList.remove('hidden');
+}
+$('forgotPasswordBtn').onclick = () => {
+  $('forgotPasswordPanel').classList.toggle('hidden');
+  const email = $('cabinetLogin').querySelector('[name="email"]').value.trim();
+  if (email) $('forgotPasswordForm').querySelector('[name="email"]').value = email;
+};
+$('forgotPasswordForm').onsubmit = async event => {
+  event.preventDefault();
+  const status = $('forgotPasswordStatus'); status.textContent = '';
+  if (!client) { status.textContent = 'Supabase конфигурациясы жок.'; return; }
+  const button = event.target.querySelector('button[type="submit"]'); button.disabled = true;
+  try {
+    const email = new FormData(event.target).get('email').trim();
+    const redirectTo = window.location.origin + window.location.pathname;
+    const {error} = await client.auth.resetPasswordForEmail(email, {redirectTo});
+    if (error) throw error;
+    status.textContent = 'Эгер бул почта катталган болсо, сырсөздү калыбына келтирүү шилтемеси жөнөтүлөт. Почтаңызды жана Спам папкасын текшериңиз.';
+  } catch (error) { status.textContent = 'Шилтемени жөнөтүү катасы: ' + error.message; }
+  finally { button.disabled = false; }
+};
+$('passwordRecoveryForm').onsubmit = async event => {
+  event.preventDefault();
+  const status = $('passwordRecoveryStatus'); status.textContent = '';
+  const form = new FormData(event.target);
+  const password = String(form.get('password') || '');
+  if (password !== String(form.get('confirm') || '')) { status.textContent = 'Сырсөздөр дал келген жок.'; return; }
+  const button = event.target.querySelector('button[type="submit"]'); button.disabled = true;
+  try {
+    const {error} = await client.auth.updateUser({password});
+    if (error) throw error;
+    status.textContent = 'Сырсөз ийгиликтүү жаңыртылды. Эми жаңы сырсөз менен кириңиз.';
+    event.target.reset();
+    await client.auth.signOut();
+    passwordRecoveryMode = false;
+    history.replaceState(null, '', window.location.pathname);
+    $('passwordRecoveryCard').classList.add('hidden');
+    $('cabinetLoginCard').classList.remove('hidden');
+    $('cabinetDashboard').classList.add('hidden');
+    $('teacherAccountLinkPanel').classList.add('hidden');
+    $('cabinetSessionNotice').textContent = 'Сырсөз жаңыртылды. Жаңы сырсөз менен кириңиз.';
+    await updateSurveyAccess();
+  } catch(error) { status.textContent = 'Сырсөздү жаңыртуу катасы: ' + error.message; }
+  finally { button.disabled = false; }
+};
 async function loadCabinet() {
   $('cabinetLoginError').textContent = '';
   if (!client) {
@@ -678,6 +738,12 @@ async function loadCabinet() {
   }
   const {data:authData,error:authError} = await client.auth.getUser();
   const signedIn = !authError && !!authData?.user;
+  if (signedIn && (passwordRecoveryMode || recoveryLinkHint)) {
+    passwordRecoveryMode = true;
+    showPasswordRecovery();
+    return;
+  }
+  $('passwordRecoveryCard').classList.add('hidden');
   $('cabinetLoginCard').classList.toggle('hidden',signedIn);
   $('cabinetDashboard').classList.toggle('hidden',!signedIn);
   $('teacherAccountLinkPanel').classList.toggle('hidden',!signedIn);
@@ -937,4 +1003,4 @@ $('accountRequestsTable').onclick = async event => {
   } catch(error) { $('accountApprovalStatus').textContent = 'Ката: ' + error.message; button.disabled = false; }
 };
 
-loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); });
+loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || passwordRecoveryMode) tab('cabinet'); });
