@@ -71,6 +71,25 @@ for (const s of schools) for (const id of ['schoolSelect','adminSchool','newAdmi
 // Башка мектептер мурдагы кол менен толтуруучу форманы колдоно берет.
 let directory = {teachers:[], subjects:[], classes:[]};
 let directoryRequest = 0;
+let testModeAuthorized = false;
+const testModeEnabled = () => testModeAuthorized && $('testModeToggle').checked && Number($('schoolSelect').value) === 1;
+async function updateTestModeAccess() {
+  testModeAuthorized = false;
+  if (client) {
+    const {data:auth} = await client.auth.getUser();
+    if (auth?.user) {
+      const [superResult,adminResult] = await Promise.all([
+        client.from('super_admins').select('user_id').eq('user_id',auth.user.id).maybeSingle(),
+        client.from('admin_users').select('school_id').eq('user_id',auth.user.id).eq('school_id',1).maybeSingle()
+      ]);
+      testModeAuthorized = (!!superResult.data && !superResult.error) || (!!adminResult.data && !adminResult.error);
+    }
+  }
+  $('testModePanel').classList.toggle('hidden', !testModeAuthorized || Number($('schoolSelect').value) !== 1);
+  if (!testModeAuthorized) $('testModeToggle').checked = false;
+  await refreshDirectory();
+}
+$('testModeToggle').addEventListener('change', refreshDirectory);
 const directorySelects = ['teacherSelect','observedTeacherSelect','subjectSelect','classSelect'];
 function setLegacyMode(enabled) {
   $('legacyFields').classList.toggle('hidden', !enabled);
@@ -93,12 +112,15 @@ async function refreshDirectory() {
   const request = ++directoryRequest;
   const schoolId = Number($('schoolSelect').value);
   $('directoryStatus').textContent = '';
-  if (schoolId !== 1) { setLegacyMode(true); return; }
+  $('testModePanel').classList.toggle('hidden', !testModeAuthorized || schoolId !== 1);
+  if (schoolId !== 1) { $('testModeToggle').checked = false; setLegacyMode(true); return; }
   setLegacyMode(false);
   for (const id of directorySelects) $(id).disabled = true;
   $('directoryStatus').textContent = 'Мугалимдер, предметтер жана класстар жүктөлүүдө...';
   if (!client) { $('directoryStatus').textContent = 'Supabase конфигурациясы жок.'; return; }
-  const {data,error} = await client.rpc('get_observation_directory', {p_school_id: schoolId});
+  const {data,error} = testModeEnabled()
+    ? await client.rpc('get_test_observation_directory', {p_school_id: schoolId})
+    : await client.rpc('get_observation_directory', {p_school_id: schoolId});
   if (request !== directoryRequest) return;
   if (error) {
     $('directoryStatus').textContent = 'Тизмелер жүктөлгөн жок. Алгач архивдеги SQL файлын Supabase SQL Editor аркылуу иштетиңиз. Ката: ' + error.message;
@@ -115,7 +137,7 @@ async function refreshDirectory() {
   fillDirectorySelect('classSelect',directory.classes,'Классты тандаңыз');
   const complete = directory.teachers.length && directory.subjects.length && directory.classes.length;
   for (const id of directorySelects) $(id).disabled = !complete;
-  $('directoryStatus').textContent = complete ? 'Тизмелер даяр. Тест мугалим жана тест предмет расмий тандоодон жашырылган.' : 'Тизмелер толук эмес. Supabase маалыматтарын текшериңиз.';
+  $('directoryStatus').textContent = complete ? (testModeEnabled() ? 'ТЕСТТИК РЕЖИМ: жыйынтыктар расмий статистикага кирбейт.' : 'Тизмелер даяр. Тест мугалим жана тест предмет расмий тандоодон жашырылган.') : 'Тизмелер толук эмес. Supabase маалыматтарын текшериңиз.';
 }
 $('schoolSelect').addEventListener('change', refreshDirectory);
 
@@ -161,6 +183,7 @@ $('survey').onsubmit = async e => {
   const max = Math.max(...counts), winners = labels.filter((_,i) => counts[i] === max);
   const outcome = winners.length === 1 ? winners[0] : 'Аралаш: ' + winners.join(' / ');
   const useDirectory = schoolId === 1;
+  const submittingTest = testModeEnabled();
   const getSelected = (id, rows) => rows.find(x => String(x.id) === String(form.get(id)));
   const observer = useDirectory ? getSelected('teacher_id',directory.teachers) : null;
   const observed = useDirectory ? getSelected('observed_teacher_id',directory.teachers) : null;
@@ -186,6 +209,7 @@ $('survey').onsubmit = async e => {
     feedback:String(form.get('feedback') || '').trim()
   };
   const payload = {
+    is_test:submittingTest,
     school_id:schoolId, teacher_name:observerTeacher,
     subject:useDirectory ? selectedSubject.name : String(form.get('subject') || '').trim(),
     classroom:useDirectory ? selectedClass.name : String(form.get('classroom') || '').trim(),
@@ -198,7 +222,7 @@ $('survey').onsubmit = async e => {
     if (error) throw error;
     $('survey').classList.add('hidden'); $('result').classList.remove('hidden');
     $('result').innerHTML = `<h2>Жыйынтык сакталды ✓</h2><h3>${escapeHtml(outcome)}</h3>${labels.map((l,i) => `<p>${l}: <b>${Math.round(counts[i]/questions.length*100)}%</b></p><div class="bar"><div class="fill" style="width:${counts[i]/questions.length*100}%"></div></div>`).join('')}<p class="muted">Жыйынтык администрациянын базасына сакталды.</p><button id="again">Жаңы талдоо</button>`;
-    $('again').onclick = () => { e.target.reset(); $('survey').classList.remove('hidden'); $('result').classList.add('hidden'); window.scrollTo(0,0); };
+    $('again').onclick = async () => { e.target.reset(); $('survey').classList.remove('hidden'); $('result').classList.add('hidden'); await refreshDirectory(); window.scrollTo(0,0); };
   } catch(err) { $('surveyError').textContent = 'Сактоо мүмкүн болгон жок: ' + err.message; }
   finally { $('submitBtn').disabled = false; }
 };
@@ -245,15 +269,16 @@ $('login').onsubmit = async e => {
   const {error} = await client.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});
   if (error) { $('loginError').textContent = 'Кирүү ишке ашкан жок: ' + error.message; return; }
   await checkSession();
+  await updateTestModeAccess();
 };
-$('logout').onclick = async () => { await client?.auth.signOut(); all=[]; isAdmin=false; isSuperAdminUser=false; adminSchoolId=null; $('loginError').textContent=''; await checkSession(); };
+$('logout').onclick = async () => { await client?.auth.signOut(); all=[]; isAdmin=false; isSuperAdminUser=false; adminSchoolId=null; $('loginError').textContent=''; await checkSession(); await updateTestModeAccess(); };
 async function loadDashboard() {
   try {
     $('adminError').textContent = ''; all=[]; let start=0;
     while (true) {
       const {data,error} = await client.from('lesson_reviews').select('*').order('created_at',{ascending:false}).range(start,start+999);
       if (error) throw error;
-      all.push(...data);
+      all.push(...data.filter(r => r.is_test !== true));
       if (data.length < 1000) break;
       start += 1000;
     }
@@ -624,6 +649,7 @@ $('cabinetLogin').onsubmit = async event => {
     if (error) throw error;
     event.target.reset();
     await loadCabinet();
+    await updateTestModeAccess();
   } catch(error) {
     $('cabinetLoginError').textContent = 'Кирүү ишке ашкан жок: ' + error.message;
   } finally { button.disabled = false; }
@@ -636,6 +662,7 @@ $('cabinetLogout').onclick = async () => {
   $('cabinetRecent').textContent='0';
   $('cabinetReviews').replaceChildren();
   await loadCabinet();
+  await updateTestModeAccess();
 };
 
-loadSchools();
+loadSchools().then(updateTestModeAccess);
