@@ -114,6 +114,18 @@
 <button type="submit" id="saveTeacherBtn">Сактоо</button> <button type="button" id="cancelTeacherEdit" class="secondary">Жаңы мугалим</button>
 </form><p id="teacherManageStatus" role="status"></p>
 </div>
+<div id="passwordAdminPanel" class="card hidden">
+<h3>Мугалимдин сырсөзүн жаңыртуу</h3>
+<p class="muted">Мугалимдин ким экенин жана макулдугун текшергенден кийин гана жаңы сырсөз орнотуңуз. Башкы администратор бардык мектептерди, мектеп администратору өз мектебин гана башкарат.</p>
+<form id="adminPasswordResetForm">
+<label>Мектеп<select id="resetTeacherSchool" required></select></label>
+<label>Мугалим<select id="resetTeacherId" required><option value="">Мугалимди тандаңыз</option></select></label>
+<label>Жаңы убактылуу сырсөз (кеминде 12 белги)<input id="resetTeacherPassword" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+<label>Сырсөздү кайталаңыз<input id="resetTeacherPasswordConfirm" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label>
+<label style="display:flex;gap:10px;align-items:flex-start;font-weight:500"><input id="resetTeacherConsent" type="checkbox" required style="width:auto;margin:4px 0">Мугалимдин ким экенин жана сырсөздү жаңыртууга макулдугун текшердим.</label>
+<button type="submit" id="resetTeacherSubmit">Сырсөздү жаңыртуу</button>
+</form><p id="resetTeacherStatus" role="status"></p>
+</div>
 <div id="accountApprovalPanel" class="card hidden"><h3>Мугалимдердин аккаунттарын бекитүү</h3><p class="muted">Арыз берген адамдын ким экенин мектептен тактагандан кийин гана бекитиңиз.</p><label>Мектеп<select id="approvalSchool"></select></label><button id="refreshAccountRequests" type="button" class="secondary">Арыздарды жаңыртуу</button><div class="scroll"><table><thead><tr><th>Мугалим</th><th>Арыз берген email</th><th>Абалы</th><th>Күнү</th><th>Аракет</th></tr></thead><tbody id="accountRequestsTable"></tbody></table></div><p id="accountApprovalStatus" role="status"></p></div>
 <div id="superAdminPanel" class="hidden">
 <div class="card"><h3>Мектептерди башкаруу</h3><p class="muted">Бул бөлүм башкы администратор үчүн гана.</p><form id="addSchoolForm"><label>Жаңы мектептин аталышы<input id="newSchoolName" required maxlength="200" placeholder="Мисалы: №98 жалпы билим берүү мектеби"></label><button type="submit">Мектеп кошуу</button></form><h3>Мектептердин тизмеси</h3><div class="scroll"><table><thead><tr><th>Мектеп</th><th>Аракет</th></tr></thead><tbody id="manageSchoolsTable"></tbody></table></div><p id="schoolManageStatus" role="status"></p></div>
@@ -186,6 +198,6 @@ window.__sabakRecoveryCallback = /(?:[?#&])(?:code|access_token|token_hash)=/.te
 </script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=20261024-recovery3"></script>
+<script src="app.js?v=20261024-admin-reset1"></script>
 </body>
 </html>
