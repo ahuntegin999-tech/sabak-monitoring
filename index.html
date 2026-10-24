@@ -54,6 +54,9 @@
 <h2>Мугалимдин жеке кабинети</h2>
 <p class="muted">Мугалим өзүнө тиешелүү сабак талдоолорун гана көрөт. Талдоочунун аты-жөнү жашыруун сакталат.</p>
 <p id="cabinetSessionNotice" class="muted"></p>
+<div class="card" style="box-shadow:none;border:1px solid #e2e8f0">
+<h3>Жаңы мугалим катары катталуу</h3><p class="muted">Email'иңизди ырастагандан кийин кирип, мектептеги профилиңизге байланыштыруу арызын жөнөтүңүз.</p>
+<form id="teacherSignupForm"><label>Электрондук почта<input type="email" name="email" required autocomplete="email"></label><label>Сырсөз (кеминде 8 белги)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label><button type="submit">Катталуу</button></form><p id="teacherSignupStatus" role="status"></p></div>
 <form id="cabinetLogin">
 <label>Электрондук почта<input type="email" name="email" autocomplete="username" required></label>
 <label>Сырсөз<input type="password" name="password" autocomplete="current-password" required></label>
@@ -61,6 +64,7 @@
 <p id="cabinetLoginError" class="error" role="alert"></p>
 </form>
 </div>
+<div id="teacherAccountLinkPanel" class="card hidden"><h3>Мугалимдин аккаунтун байланыштыруу</h3><p class="muted">Өз мектебиңизди жана аты-жөнүңүздү тандап, администраторго арыз жөнөтүңүз. Администратор сиздин ким экениңизди текшерет.</p><label>Мектеп<select id="requestSchool"><option value="">Мектепти тандаңыз</option></select></label><label>Мугалим<select id="requestTeacher"><option value="">Мугалимди тандаңыз</option></select></label><button id="submitTeacherLinkRequest" type="button">Арыз жөнөтүү</button><p id="teacherLinkStatus" role="status"></p></div>
 <div id="cabinetDashboard" class="hidden">
 <div class="card topline"><div><h2>Менин сабак талдоолорум</h2><p class="muted">Баалоолор жана сунуштар. Талдоочунун аты-жөнү көрсөтүлбөйт.</p></div><button id="cabinetLogout" class="secondary">Аккаунттан чыгуу</button></div>
 <div class="card"><div class="stats"><div class="stat"><strong id="cabinetTotal">0</strong>Жалпы талдоо</div><div class="stat"><strong id="cabinetRecent">0</strong>Акыркы 7 күн</div></div><p id="cabinetStatus" class="muted" role="status"></p><div id="cabinetReviews"></div></div>
@@ -94,6 +98,7 @@
 <button type="submit" id="saveTeacherBtn">Сактоо</button> <button type="button" id="cancelTeacherEdit" class="secondary">Жаңы мугалим</button>
 </form><p id="teacherManageStatus" role="status"></p>
 </div>
+<div id="accountApprovalPanel" class="card hidden"><h3>Мугалимдердин аккаунттарын бекитүү</h3><p class="muted">Арыз берген адамдын ким экенин мектептен тактагандан кийин гана бекитиңиз.</p><label>Мектеп<select id="approvalSchool"></select></label><button id="refreshAccountRequests" type="button" class="secondary">Арыздарды жаңыртуу</button><div class="scroll"><table><thead><tr><th>Мугалим</th><th>Арыз берген email</th><th>Абалы</th><th>Күнү</th><th>Аракет</th></tr></thead><tbody id="accountRequestsTable"></tbody></table></div><p id="accountApprovalStatus" role="status"></p></div>
 <div id="superAdminPanel" class="hidden">
 <div class="card"><h3>Мектептерди башкаруу</h3><p class="muted">Бул бөлүм башкы администратор үчүн гана.</p><form id="addSchoolForm"><label>Жаңы мектептин аталышы<input id="newSchoolName" required maxlength="200" placeholder="Мисалы: №98 жалпы билим берүү мектеби"></label><button type="submit">Мектеп кошуу</button></form><h3>Мектептердин тизмеси</h3><div class="scroll"><table><thead><tr><th>Мектеп</th><th>Аракет</th></tr></thead><tbody id="manageSchoolsTable"></tbody></table></div><p id="schoolManageStatus" role="status"></p></div>
 
