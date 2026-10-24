@@ -304,6 +304,7 @@ async function checkSession() {
   $('superAdminPanel').classList.toggle('hidden',!isSuperAdminUser);
   $('schoolComparisonPanel').classList.toggle('hidden', !isSuperAdminUser);
   $('teacherManagementPanel').classList.toggle('hidden', !isAdmin);
+  $('accountApprovalPanel').classList.toggle('hidden', !isAdmin);
   if (isAdmin) {
   await loadDashboard();
   await loadTeacherManagement();
@@ -678,7 +679,9 @@ async function loadCabinet() {
   const signedIn = !authError && !!authData?.user;
   $('cabinetLoginCard').classList.toggle('hidden',signedIn);
   $('cabinetDashboard').classList.toggle('hidden',!signedIn);
+  $('teacherAccountLinkPanel').classList.toggle('hidden',!signedIn);
   if (!signedIn) return;
+  await loadTeacherAccountLink();
   $('cabinetStatus').textContent = 'Талдоолор жүктөлүүдө...';
   $('cabinetReviews').replaceChildren();
   const {data,error} = await client.rpc('get_my_lesson_reviews');
@@ -802,6 +805,135 @@ $('teacherManageForm').onsubmit = async e => {
     if(Number($('schoolSelect').value)===Number($('manageTeacherSchool').value)) await refreshDirectory();
   }catch(error){$('teacherManageStatus').textContent='Сактоо катасы: '+error.message;}
   finally{button.disabled=false;}
+};
+
+
+
+// Катталуу жана мугалимдин профилине байланыштыруу.
+$('teacherSignupForm').onsubmit = async event => {
+  event.preventDefault();
+  const status = $('teacherSignupStatus'); status.textContent = '';
+  if (!client) { status.textContent = 'Supabase конфигурациясы жок.'; return; }
+  const button = event.target.querySelector('button'); button.disabled = true;
+  try {
+    const form = new FormData(event.target);
+    const {data,error} = await client.auth.signUp({
+      email:String(form.get('email')).trim(),password:String(form.get('password')),
+      options:{emailRedirectTo:window.location.origin + window.location.pathname}
+    });
+    if (error) throw error;
+    event.target.reset();
+    status.textContent = data.session
+      ? 'Катталдыңыз. Мектепти жана аты-жөнүңүздү тандап арыз жөнөтүңүз.'
+      : 'Каттоо өтүнүчү кабыл алынды. Электрондук почтаңызга келген ырастоо шилтемесин текшериңиз.';
+    if (data.session) { await checkSession(); await loadCabinet(); await updateTestModeAccess(); }
+  } catch(error) { status.textContent = 'Каттоо катасы: ' + error.message; }
+  finally { button.disabled = false; }
+};
+let linkRequestData = null;
+async function loadTeacherAccountLink() {
+  if (!client) return;
+  const status = $('teacherLinkStatus'); status.textContent = 'Аккаунт текшерилүүдө...';
+  const profile = await client.rpc('get_my_teacher_profile');
+  if (profile.error) { status.textContent = 'Профиль катасы: ' + profile.error.message; return; }
+  if (profile.data) {
+    $('requestSchool').disabled = true; $('requestTeacher').disabled = true;
+    $('submitTeacherLinkRequest').disabled = true;
+    status.textContent = 'Аккаунтуңуз байланышкан: ' + profile.data.full_name;
+    return;
+  }
+  $('requestSchool').disabled = false; $('requestTeacher').disabled = false;
+  $('submitTeacherLinkRequest').disabled = false;
+  const schoolSelect = $('requestSchool');
+  const previous = schoolSelect.value;
+  schoolSelect.replaceChildren(new Option('Мектепти тандаңыз',''));
+  for (const school of schools) schoolSelect.add(new Option(school.name,String(school.id)));
+  if (schools.some(s => String(s.id) === previous)) schoolSelect.value = previous;
+  await loadLinkRequestStatus();
+  await loadLinkRequestTeachers();
+}
+async function loadLinkRequestStatus() {
+  const {data,error} = await client.rpc('get_my_teacher_account_request');
+  if (error) { $('teacherLinkStatus').textContent = 'Арыздын абалын алуу катасы: ' + error.message; return; }
+  linkRequestData = data;
+  if (data?.status === 'pending') {
+    $('teacherLinkStatus').textContent = 'Арызыңыз администратордун кароосунда. Мектеп: ' + schoolName(data.school_id);
+    $('requestSchool').value = String(data.school_id);
+    $('submitTeacherLinkRequest').disabled = true;
+  } else if (data?.status === 'rejected') {
+    $('teacherLinkStatus').textContent = 'Мурдагы арызыңыз четке кагылган. Маалыматтарды текшерип, кайра арыз жөнөтсөңүз болот.';
+    $('submitTeacherLinkRequest').disabled = false;
+  } else {
+    $('teacherLinkStatus').textContent = 'Мектепти жана өзүңүздүн аты-жөнүңүздү тандаңыз.';
+  }
+}
+async function loadLinkRequestTeachers() {
+  const schoolId = Number($('requestSchool').value);
+  const select = $('requestTeacher'); select.replaceChildren(new Option('Мугалимди тандаңыз',''));
+  if (!schoolId) return;
+  const {data,error} = await client.rpc('get_observation_directory',{p_school_id:schoolId});
+  if (error) { $('teacherLinkStatus').textContent = 'Мугалимдер жүктөлгөн жок: ' + error.message; return; }
+  for (const teacher of (data?.teachers||[])) select.add(new Option(teacher.full_name,String(teacher.id)));
+  if (linkRequestData && Number(linkRequestData.school_id) === schoolId) select.value = String(linkRequestData.teacher_id);
+}
+$('requestSchool').onchange = loadLinkRequestTeachers;
+$('submitTeacherLinkRequest').onclick = async () => {
+  const schoolId = Number($('requestSchool').value), teacherId = Number($('requestTeacher').value);
+  if (!schoolId || !teacherId) { $('teacherLinkStatus').textContent = 'Мектепти жана мугалимди тандаңыз.'; return; }
+  if (!confirm('Тандалган мугалим чын эле сиз экениңизди ырастайсызбы?')) return;
+  const button = $('submitTeacherLinkRequest'); button.disabled = true;
+  try {
+    const {error} = await client.rpc('submit_teacher_account_request',{p_school_id:schoolId,p_teacher_id:teacherId});
+    if (error) throw error;
+    $('teacherLinkStatus').textContent = 'Арыз жөнөтүлдү. Мектеп администраторунун бекитүүсүн күтүңүз.';
+    await loadLinkRequestStatus();
+  } catch(error) { $('teacherLinkStatus').textContent = 'Арыз катасы: ' + error.message; button.disabled = false; }
+};
+
+// Администратор: арыздарды көрүү жана кароо.
+async function loadAccountApprovals() {
+  if (!client || !isAdmin) return;
+  const select = $('approvalSchool'); const previous = select.value;
+  select.replaceChildren(new Option('Мектепти тандаңыз',''));
+  const permitted = isSuperAdminUser ? schools : schools.filter(s => String(s.id) === adminSchoolId);
+  for (const s of permitted) select.add(new Option(s.name,String(s.id)));
+  if (permitted.some(s => String(s.id) === previous)) select.value = previous;
+  else if (permitted.length) select.value = String(permitted[0].id);
+  await refreshAccountApprovals();
+}
+let accountRequests = [];
+async function refreshAccountApprovals() {
+  const schoolId = Number($('approvalSchool').value);
+  const table = $('accountRequestsTable');
+  if (!isAdmin || !schoolId) { table.innerHTML = '<tr><td colspan="5">Мектепти тандаңыз</td></tr>'; return; }
+  table.innerHTML = '<tr><td colspan="5">Жүктөлүүдө...</td></tr>';
+  const {data,error} = await client.rpc('admin_list_teacher_account_requests',{p_school_id:schoolId});
+  if (error) { $('accountApprovalStatus').textContent = 'Ката: ' + error.message; table.replaceChildren(); return; }
+  accountRequests = data || [];
+  table.innerHTML = accountRequests.map(r => `<tr><td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(r.applicant_email)}</td><td>${escapeHtml(r.request_status)}</td><td>${escapeHtml(new Date(r.requested_at).toLocaleString('ky-KG'))}</td><td>${r.request_status === 'pending' ? `<button class="smallbtn" data-account-approve="${escapeHtml(r.request_id)}">Бекитүү</button> <button class="secondary smallbtn" data-account-reject="${escapeHtml(r.request_id)}">Четке кагуу</button>` : '—'}</td></tr>`).join('') || '<tr><td colspan="5">Азырынча арыз жок</td></tr>';
+  $('accountApprovalStatus').textContent = 'Арыздар: ' + accountRequests.length;
+}
+$('approvalSchool').onchange = refreshAccountApprovals;
+$('refreshAccountRequests').onclick = refreshAccountApprovals;
+$('accountRequestsTable').onclick = async event => {
+  const button = event.target.closest('[data-account-approve],[data-account-reject]');
+  if (!button || !isAdmin) return;
+  const approve = button.hasAttribute('data-account-approve');
+  const id = Number(approve ? button.dataset.accountApprove : button.dataset.accountReject);
+  const request = accountRequests.find(r => Number(r.request_id) === id);
+  if (!request) return;
+  const message = approve
+    ? `Бул адамдын ким экенин мектептен текшердиңизби?\n\n${request.applicant_email}\n${request.teacher_name}\n\nАккаунтту байланыштырасызбы?`
+    : `${request.applicant_email} дарегинен келген арызды четке кагасызбы?`;
+  if (!confirm(message)) return;
+  button.disabled = true;
+  try {
+    const {error} = await client.rpc('admin_review_teacher_account_request',{p_request_id:id,p_approve:approve});
+    if (error) throw error;
+    await refreshAccountApprovals();
+    await refreshManagedTeachers();
+    $('accountApprovalStatus').textContent = approve ? 'Арыз бекитилди, аккаунт байланыштырылды.' : 'Арыз четке кагылды.';
+  } catch(error) { $('accountApprovalStatus').textContent = 'Ката: ' + error.message; button.disabled = false; }
 };
 
 loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); });
