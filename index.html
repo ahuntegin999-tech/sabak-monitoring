@@ -22,6 +22,7 @@
 <label style="display:flex;align-items:center;gap:10px"><input id="testModeToggle" type="checkbox" style="width:auto;margin:0"> Тесттик режим (администратор үчүн)</label>
 <p class="muted" style="margin-bottom:0">Тесттик мугалим жана предмет колдонулат. Бул талдоолор расмий статистикага кошулбайт.</p>
 </div>
+<div id="surveyAuthNotice" class="notice">Талдоо жөнөтүү үчүн жеке аккаунтка кириңиз. «Жеке кабинет» же «Администратор» бөлүмүнөн кириңиз.</div>
 <div id="directoryFields" class="hidden">
 <label>Сабакка катышып, талдоо жүргүзгөн мугалим *<select id="teacherSelect" name="teacher_id" required disabled><option value="">Мугалимди тандаңыз</option></select></label>
 <label>Сабак өткөн мугалим *<select id="observedTeacherSelect" name="observed_teacher_id" required disabled><option value="">Мугалимди тандаңыз</option></select></label>
@@ -45,7 +46,7 @@
 <div id="questions"></div>
 <label>Сабак боюнча сунуштар жана пикирлер (милдеттүү эмес)<textarea name="feedback" rows="4" maxlength="3000" placeholder="Сунуштарыңызды жана пикирлериңизди жазыңыз"></textarea></label>
 <p class="muted">Ар бир суроого сабакта иш жүзүндө байкалган аракетке ылайык бир жооп тандаңыз.</p>
-<button id="submitBtn" type="submit">Жыйынтыкты эсептөө жана сактоо</button><p id="surveyError" class="error" role="alert"></p>
+<button id="submitBtn" type="submit" disabled>Жыйынтыкты эсептөө жана сактоо</button><p id="surveyError" class="error" role="alert"></p>
 </form></div><div id="result" class="card hidden" aria-live="polite"></div>
 </section>
 <section id="cabinet" class="hidden">
@@ -78,6 +79,21 @@
 </div>
 <div id="schoolComparisonPanel" class="card hidden"><h3>Мектептер боюнча салыштыруу</h3><div class="scroll"><table><thead><tr><th>Мектеп</th><th>Мугалим</th><th>Талдоо</th><th>Репродуктивдүү</th><th>Продуктивдүү</th><th>Креативдүү</th><th>Аралаш</th></tr></thead><tbody id="schoolsTable"></tbody></table></div></div>
 <div class="card"><div class="topline"><h3>Бардык талдоолор</h3><button id="export">CSV жүктөө (Excel)</button></div><div class="scroll"><table><thead><tr><th>Убакыт</th><th>Мектеп</th><th>Талдоочу мугалим</th><th>Сабак өткөн мугалим</th><th>Предмет / класс</th><th>Тема</th><th>Жыйынтык</th><th>Жооптор</th><th>Аракет</th></tr></thead><tbody id="records"></tbody></table></div><p id="adminError" class="error" role="alert"></p></div>
+<div id="teacherManagementPanel" class="card hidden">
+<h3>Мугалимдерди башкаруу</h3><p class="muted">Өз мектебиңиздин мугалимдерин кошуу, оңдоо, предметтерин бекитүү жана активдүүлүгүн өзгөртүү. Аккаунтту байланыштырууну мугалимдин макулдугу менен өзүнчө ишке киргизебиз.</p>
+<label>Башкарылуучу мектеп<select id="manageTeacherSchool"></select></label>
+<label>Мугалимди издөө<input id="manageTeacherSearch" placeholder="Аты-жөнү же кызматы"></label>
+<div class="scroll"><table><thead><tr><th>Мугалим</th><th>Кызматы</th><th>Предметтери</th><th>Аккаунт</th><th>Абалы</th><th>Аракет</th></tr></thead><tbody id="manageTeachersTable"></tbody></table></div>
+<h4 id="teacherEditorTitle">Мугалим кошуу</h4>
+<form id="teacherManageForm">
+<input id="editTeacherId" type="hidden">
+<label>Аты-жөнү *<input id="editTeacherName" maxlength="200" required></label>
+<label>Кызматы<input id="editTeacherPosition" maxlength="200"></label>
+<label style="display:flex;align-items:center;gap:8px"><input id="editTeacherActive" type="checkbox" checked style="width:auto;margin:0"> Активдүү мугалим</label>
+<p><b>Окуткан предметтери</b></p><div id="teacherSubjectChecks" class="check-grid"></div>
+<button type="submit" id="saveTeacherBtn">Сактоо</button> <button type="button" id="cancelTeacherEdit" class="secondary">Жаңы мугалим</button>
+</form><p id="teacherManageStatus" role="status"></p>
+</div>
 <div id="superAdminPanel" class="hidden">
 <div class="card"><h3>Мектептерди башкаруу</h3><p class="muted">Бул бөлүм башкы администратор үчүн гана.</p><form id="addSchoolForm"><label>Жаңы мектептин аталышы<input id="newSchoolName" required maxlength="200" placeholder="Мисалы: №98 жалпы билим берүү мектеби"></label><button type="submit">Мектеп кошуу</button></form><h3>Мектептердин тизмеси</h3><div class="scroll"><table><thead><tr><th>Мектеп</th><th>Аракет</th></tr></thead><tbody id="manageSchoolsTable"></tbody></table></div><p id="schoolManageStatus" role="status"></p></div>
 
