@@ -1,4 +1,5 @@
 'use strict';
+// OBSERVER_IDENTITY_LOCK_V2_20261026: observer always matches authenticated teacher profile.
 
 const legacyQuestions = [
   ['Окуучулар жаңы түшүнүктөрдү кандайча өздөштүрүштү?','Мугалим айткан аныктаманы кайталады','Түшүнүктү өз сөзү менен түшүндүрүп, мисал келтирди','Түшүнүккө жаңы колдонуу жолун сунуштады'],
@@ -121,12 +122,12 @@ async function updateSurveyAccess() {
   myTeacherProfile = null;
   if (sessionUser) {
     const profile = await client.rpc('get_my_teacher_profile');
-    if (!profile.error) myTeacherProfile = profile.data || null;
+    if (!profile.error) myTeacherProfile = Array.isArray(profile.data) ? (profile.data[0] || null) : (profile.data || null);
   }
-  const allowed = !!sessionUser && (isAdmin || testModeAuthorized || !!myTeacherProfile);
+  const allowed = !!sessionUser && !isSuperAdminUser && !!myTeacherProfile && myTeacherProfile.is_active === true && Number(myTeacherProfile.school_id) === Number($('schoolSelect').value);
   $('surveyAuthNotice').classList.toggle('hidden', allowed);
   $('surveyAuthNotice').textContent = sessionUser
-    ? 'Аккаунтуңуз мугалимдин профилине байланыштырылган эмес. Администраторго кайрылыңыз.'
+    ? (isSuperAdminUser ? 'Супер администратор сабакка талдоо бере албайт.' : 'Талдоо үчүн аккаунтуңуз ушул мектептеги активдүү мугалим профилине байланышкан болушу керек.')
     : 'Талдоо жүргүзүү үчүн «Жеке кабинет» же «Администратор» бөлүмүнөн аккаунтуңузга кириңиз.';
   $('submitBtn').disabled = !allowed;
   return allowed;
@@ -170,18 +171,21 @@ async function refreshDirectory() {
   fillDirectorySelect('classSelect',directory.classes,'Классты тандаңыз');
   const complete = observerTeachers.length && directory.teachers.length && directory.subjects.length && directory.classes.length;
   for (const id of directorySelects) $(id).disabled = !complete;
-  const privileged = isAdmin || testModeAuthorized;
-  if (!privileged) {
-    if (myTeacherProfile && Number(myTeacherProfile.school_id) === schoolId && myTeacherProfile.is_active) {
-      const mine = observerTeachers.find(t => Number(t.id) === Number(myTeacherProfile.id));
-      if (mine) {
-        $('teacherSelect').value = String(mine.id);
-        $('teacherSelect').disabled = true;
-        $('directoryStatus').textContent = 'Талдоочу: ' + mine.full_name + ' (өзгөртүүгө болбойт).';
-      } else $('directoryStatus').textContent = 'Өзүңүздүн атыңыз каталогдон табылган жок.';
-    } else $('directoryStatus').textContent = 'Мугалимдин аккаунту бул мектепке байланыштырылган эмес.';
+  // Талдоочунун аты бардык ролдор үчүн аккаунттагы мугалим профилинен гана алынат.
+  await updateSurveyAccess();
+  const mine = myTeacherProfile && Number(myTeacherProfile.school_id) === schoolId && myTeacherProfile.is_active === true
+    ? observerTeachers.find(t => Number(t.id) === Number(myTeacherProfile.id)) : null;
+  $('teacherSelect').disabled = true;
+  if (isSuperAdminUser) {
+    $('directoryStatus').textContent = 'Супер администратор талдоо бере албайт.';
+    $('submitBtn').disabled = true;
+  } else if (mine) {
+    $('teacherSelect').value = String(mine.id);
+    $('directoryStatus').textContent = 'Талдоочу: ' + mine.full_name + ' (өзгөртүүгө болбойт).';
+    $('submitBtn').disabled = !complete;
   } else {
-    $('directoryStatus').textContent = test ? 'ТЕСТТИК РЕЖИМ: талдоочу кадимки мугалимдерден тандалат.' : 'Тизмелер даяр.';
+    $('directoryStatus').textContent = 'Бул мектепте аккаунтуңузга байланышкан активдүү мугалим табылган жок.';
+    $('submitBtn').disabled = true;
   }
   await updateSurveyAccess();
   if (schoolId !== 1) $('submitBtn').disabled = true;
@@ -225,7 +229,8 @@ $('survey').onsubmit = async e => {
   const allowed = await updateSurveyAccess();
   if (!allowed || Number($('schoolSelect').value) !== 1) { $('surveyError').textContent = 'Бул мектеп үчүн аккаунт менен каталог даяр болушу керек.'; return; }
   const form = new FormData(e.target);
-  if ($('teacherSelect').disabled && myTeacherProfile && !isAdmin && !testModeAuthorized) form.set('teacher_id', String(myTeacherProfile.id));
+  // Disabled select FormData'га кирбейт. ID аккаунт профилинен гана коюлат.
+  if (myTeacherProfile) form.set('teacher_id', String(myTeacherProfile.id));
   const answers = questions.map((_,i) => form.get('q'+i) === null ? NaN : Number(form.get('q'+i)));
   const schoolId = Number(form.get('school_id'));
   if (!schools.some(s => Number(s.id) === schoolId)) { $('surveyError').textContent = 'Мектепти тандаңыз.'; return; }
@@ -239,9 +244,9 @@ $('survey').onsubmit = async e => {
   const outcome = winners.length === 1 ? winners[0] : 'Аралаш: ' + winners.join(' / ');
   const useDirectory = schoolId === 1;
   const submittingTest = testModeEnabled();
-  if (!isAdmin && !testModeAuthorized && (!myTeacherProfile || Number(myTeacherProfile.school_id) !== schoolId)) { $('surveyError').textContent = 'Бул мектептин мугалими катары аккаунтуңуз байланышкан эмес.'; return; }
+  if (isSuperAdminUser || !myTeacherProfile || myTeacherProfile.is_active !== true || Number(myTeacherProfile.school_id) !== schoolId) { $('surveyError').textContent = 'Талдоону өзүңүздүн активдүү мугалим аккаунтуңуз менен гана жөнөтө аласыз.'; return; }
   const getSelected = (id, rows) => rows.find(x => String(x.id) === String(form.get(id)));
-  const observer = useDirectory ? getSelected('teacher_id',observerTeachers) : null;
+  const observer = useDirectory ? observerTeachers.find(t => Number(t.id) === Number(myTeacherProfile?.id)) : null;
   const observed = useDirectory ? getSelected('observed_teacher_id',directory.teachers) : null;
   const selectedSubject = useDirectory ? getSelected('subject_id',directory.subjects) : null;
   const selectedClass = useDirectory ? getSelected('class_id',directory.classes) : null;
@@ -272,6 +277,7 @@ $('survey').onsubmit = async e => {
     topic:String(form.get('topic') || '').trim(),
     answers,counts,outcome,observation
   };
+  if (observer && Number(observer.id) === Number(observed?.id)) { $('surveyError').textContent = 'Өз сабагыңызга өзүңүз талдоо бере албайсыз.'; return; }
   $('submitBtn').disabled = true;
   try {
     const {error} = await client.from('lesson_reviews').insert(payload);
@@ -280,7 +286,7 @@ $('survey').onsubmit = async e => {
     $('result').innerHTML = `<h2>Жыйынтык сакталды ✓</h2><h3>${escapeHtml(outcome)}</h3>${labels.map((l,i) => `<p>${l}: <b>${Math.round(counts[i]/questions.length*100)}%</b></p><div class="bar"><div class="fill" style="width:${counts[i]/questions.length*100}%"></div></div>`).join('')}<p class="muted">Жыйынтык администрациянын базасына сакталды.</p><button id="again">Жаңы талдоо</button>`;
     $('again').onclick = async () => { e.target.reset(); $('survey').classList.remove('hidden'); $('result').classList.add('hidden'); await refreshDirectory(); window.scrollTo(0,0); };
   } catch(err) { $('surveyError').textContent = 'Сактоо мүмкүн болгон жок: ' + err.message; }
-  finally { $('submitBtn').disabled = false; }
+  finally { await updateSurveyAccess(); }
 };
 
 async function isSuperAdmin() {
