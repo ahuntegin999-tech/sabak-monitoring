@@ -767,6 +767,7 @@ async function loadCabinet() {
   await loadTeacherAccountLink();
   $('cabinetStatus').textContent = 'Талдоолор жүктөлүүдө...';
   $('cabinetReviews').replaceChildren();
+  cabinetPdfReviews = [];
   const {data,error} = await client.rpc('get_my_lesson_reviews');
   if (error) {
     $('cabinetStatus').textContent = 'Маалыматты жүктөө мүмкүн болгон жок: ' + error.message;
@@ -831,6 +832,7 @@ $('cabinetLogout').onclick = async () => {
   $('cabinetTotal').textContent='0';
   $('cabinetRecent').textContent='0';
   $('cabinetReviews').replaceChildren();
+  cabinetPdfReviews = [];
   await loadCabinet();
   await updateTestModeAccess();
   await updateSurveyAccess();
@@ -1297,6 +1299,74 @@ $('cabinetReviews').addEventListener('click', event => {
   if (!button) return;
   const review = cabinetPdfReviews.find(r => String(r.review_id) === button.dataset.pdfCabinet);
   if (review) openPdfReport(review, false);
+});
+
+
+// Бириктирилген PDF: ар бир роль үчүн буга чейин уруксат берилген маалыматтар гана.
+function combinedPdfHtml(reviews, privileged, heading) {
+  const ordered = [...reviews].sort((a,b) => new Date(b.review_date || b.created_at) - new Date(a.review_date || a.created_at));
+  const base = pdfReportHtml(ordered[0], privileged);
+  const head = base.slice(0, base.indexOf('<body>'));
+  const count = ordered.length;
+  const sums = labels.map((_,i) => ordered.reduce((n,r) => n + (Number(r.counts?.[i]) || 0),0));
+  const total = sums.reduce((a,b) => a+b,0);
+  const outcomes = labels.map((label,i) => `<tr><td>${escapeHtml(label)}</td><td>${sums[i]}</td><td>${total ? Math.round(sums[i]*100/total) : 0}%</td></tr>`).join('');
+  const summary = `<h1>${escapeHtml(heading)}</h1><p><b>Жалпы талдоолор:</b> ${count}</p>
+    <h2>Жалпы статистика (бардык критерийлер боюнча)</h2>
+    <table><thead><tr><th>Деңгээл</th><th>Жооптордун саны</th><th>Үлүшү</th></tr></thead><tbody>${outcomes}</tbody></table>
+    <p class="note">Бул статистика ар бир критерийге берилген жооптордун жалпы бөлүштүрүлүшүн көрсөтөт. Талдоолордун өзүнчө жыйынтыктары төмөндө берилген.</p>`;
+  const sections = ordered.map((r,i) => {
+    const html = pdfReportHtml(r,privileged);
+    const body = html.split('<body>')[1].split('</body>')[0];
+    return `<section class="pdf-review" style="break-before:page;page-break-before:always"><h2>${i+1}-талдоо / ${count}</h2>${body}</section>`;
+  }).join('');
+  return `${head}<body>${summary}${sections}</body></html>`;
+}
+function openCombinedPdf(reviews, privileged, heading) {
+  if (!Array.isArray(reviews) || !reviews.length) {
+    alert('Бириктирүү үчүн талдоолор табылган жок.'); return;
+  }
+  const popup = window.open('', '_blank');
+  if (!popup) { alert('PDF ачылбады. Браузерден жаңы терезелерге уруксат бериңиз.'); return; }
+  popup.document.open();
+  popup.document.write(combinedPdfHtml(reviews,privileged,heading));
+  popup.document.close();
+  popup.focus();
+  popup.addEventListener('load', () => popup.print(), {once:true});
+  setTimeout(() => { if (!popup.closed && !popup.document.hidden) popup.print(); }, 600);
+}
+function addCombinedPdfButton(container, id, text) {
+  if (!container || $(id)) return;
+  const button = document.createElement('button');
+  button.type='button'; button.id=id; button.className='secondary smallbtn';
+  button.textContent=text;
+  button.style.margin='8px 8px 8px 0';
+  container.prepend(button);
+}
+// Башкаруу панелинде тандалган мектептин бардык талдоолору (издөө талаасына көз каранды эмес).
+addCombinedPdfButton($('export')?.parentElement,'adminCombinedPdf','Бардык талдоолорду PDF');
+$('adminCombinedPdf')?.addEventListener('click', () => {
+  if (!isAdmin) return;
+  const selected = $('adminSchool').value;
+  if (selected === 'all' || selected === 'none') {
+    alert('Бир мектепти тандаңыз.'); return;
+  }
+  if (!isSuperAdminUser && String(selected) !== String(adminSchoolId)) return;
+  const rows = all.filter(r => String(r.school_id) === String(selected));
+  openCombinedPdf(rows,true,`${schoolName(selected)} — бардык сабак талдоолору`);
+});
+// Директор: өз мектебинин бардык расмий талдоолору.
+addCombinedPdfButton($('directorExport')?.parentElement,'directorCombinedPdf','Бардык талдоолорду PDF');
+$('directorCombinedPdf')?.addEventListener('click', () => {
+  if (directorSchoolId == null) return;
+  openCombinedPdf(directorRows.filter(r => String(r.school_id) === String(directorSchoolId)),true,
+    `${schoolName(directorSchoolId)} — бардык сабак талдоолору`);
+});
+// Жеке кабинет: өзүнүн гана RPC аркылуу алынган талдоолору, талдоочунун аты жок.
+addCombinedPdfButton($('cabinetReviews')?.parentElement,'cabinetCombinedPdf','Бардык талдоолорду PDF');
+$('cabinetCombinedPdf')?.addEventListener('click', () => {
+  if ($('cabinetDashboard')?.classList.contains('hidden')) return;
+  openCombinedPdf(cabinetPdfReviews,false,'Менин сабактарыма берилген бардык талдоолор');
 });
 
 loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || recoveryFromPendingLink || passwordRecoveryMode) tab('cabinet'); });
