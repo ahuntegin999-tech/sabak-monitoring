@@ -398,7 +398,7 @@ function recordDetails(r) {
   return `<details><summary>Көрүү</summary>${meta}<h4>Критерийлер боюнча жооптор</h4>${answers}</details>`;
 }
 function renderRecords() {
-  $('records').innerHTML = visibleRows().map(r => `<tr><td>${escapeHtml(new Date(r.created_at).toLocaleString('ky-KG'))}</td><td>${escapeHtml(schoolName(r.school_id))}</td><td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(observedName(r)||'—')}</td><td>${escapeHtml(r.subject)} / ${escapeHtml(r.classroom)}</td><td>${escapeHtml(r.topic)}</td><td>${escapeHtml(r.outcome)}</td><td>${recordDetails(r)}</td><td>${canDeleteReview(r)?`<button class="danger smallbtn" data-delete-id="${escapeHtml(r.id)}">Өчүрүү</button>`:''}</td></tr>`).join('') || '<tr><td colspan="9">Маалымат жок</td></tr>';
+  $('records').innerHTML = visibleRows().map(r => `<tr><td>${escapeHtml(new Date(r.created_at).toLocaleString('ky-KG'))}</td><td>${escapeHtml(schoolName(r.school_id))}</td><td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(observedName(r)||'—')}</td><td>${escapeHtml(r.subject)} / ${escapeHtml(r.classroom)}</td><td>${escapeHtml(r.topic)}</td><td>${escapeHtml(r.outcome)}</td><td>${recordDetails(r)}<p><button type="button" class="secondary smallbtn" data-pdf-admin="${escapeHtml(r.id)}">PDF отчет</button></p></td><td>${canDeleteReview(r)?`<button class="danger smallbtn" data-delete-id="${escapeHtml(r.id)}">Өчүрүү</button>`:''}</td></tr>`).join('') || '<tr><td colspan="9">Маалымат жок</td></tr>';
 }
 $('adminSchool').onchange = renderDashboard;
 $('filter').oninput = renderRecords;
@@ -674,6 +674,7 @@ function renderCabinetReviews(reviews) {
       <p><b>Жыйынтык:</b> ${escapeHtml(r.outcome||'—')}</p>
       ${scores}
       <details><summary>Толук талдоону жана сунуштарды көрүү</summary>${details}<h4>Критерийлер боюнча жооптор</h4>${answerDetails}</details>
+      <button type="button" class="secondary smallbtn" data-pdf-cabinet="${escapeHtml(r.review_id)}">PDF отчет</button>
     </article>`;
   }).join('');
 }
@@ -774,6 +775,7 @@ async function loadCabinet() {
   const reviews = Array.isArray(data) ? data : [];
   $('cabinetStatus').textContent = 'Талдоочунун аты-жөнү жеке кабинетте көрсөтүлбөйт.';
   renderCabinetReviews(reviews);
+  cabinetPdfReviews = reviews;
 }
 $('cabinetLogin').onsubmit = async event => {
   event.preventDefault();
@@ -1153,7 +1155,7 @@ function renderDirectorDashboard() {
     <td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(observedName(r) || '—')}</td>
     <td>${escapeHtml(r.subject)} / ${escapeHtml(r.classroom)}</td>
     <td>${escapeHtml(r.topic)}</td><td>${escapeHtml(r.outcome)}</td>
-    <td>${recordDetails(r)}</td></tr>`).join('') || '<tr><td colspan="7">Талдоолор жок</td></tr>';
+    <td>${recordDetails(r)}<p><button type="button" class="secondary smallbtn" data-pdf-director="${escapeHtml(r.id)}">PDF отчет</button></p></td></tr>`).join('') || '<tr><td colspan="7">Талдоолор жок</td></tr>';
 }
 async function loadDirectorDashboard() {
   const status = $('directorStatus');
@@ -1233,5 +1235,68 @@ $('directorExport').onclick = () => {
   a.download = `director-school-${directorSchoolId}-reviews.csv`; a.click();
   setTimeout(() => URL.revokeObjectURL(url),1000);
 };
+
+// PDF: браузердин «Басып чыгаруу → PDF катары сактоо» мүмкүнчүлүгү.
+// Мугалимдин маалыматы get_my_lesson_reviews RPC'синен гана алынат;
+// анда талдоочунун аты жана ID'си кайтарылбайт.
+let cabinetPdfReviews = [];
+function pdfReportHtml(review, privileged) {
+  const obs = review.observation || {};
+  const answers = Array.isArray(review.answers) ? review.answers : [];
+  const counts = Array.isArray(review.counts) ? review.counts : [];
+  const qs = answers.length === 10 ? legacyQuestions : questions;
+  const date = review.review_date || review.created_at;
+  const safe = value => escapeHtml(valueText(value) || '—');
+  const item = (title, value) => `<div class="item"><strong>${safe(title)}</strong><span>${safe(value)}</span></div>`;
+  const criteria = answers.map((answer,i) => `<tr><td>${i+1}. ${safe(qs[i]?.[0] || 'Критерий')}</td><td>${safe(qs[i]?.[Number(answer)+1] || '—')}</td></tr>`).join('');
+  const total = counts.reduce((sum, n) => sum + (Number(n) || 0), 0);
+  const distribution = labels.map((label,i) => item(label, `${Number(counts[i]) || 0} (${total ? Math.round((Number(counts[i]) || 0) / total * 100) : 0}%)`)).join('');
+  const details = cabinetObservationLabels.map(([key,title]) => item(title, obs[key])).join('');
+  const observed = privileged ? observedName(review) : '';
+  const school = privileged ? schoolName(review.school_id) : '';
+  return `<!doctype html><html lang="ky"><head><meta charset="utf-8"><title>Сабактын талдоо отчёту</title>
+  <style>@page{size:A4;margin:17mm}body{font:12px/1.55 Arial,sans-serif;color:#14243e;margin:0}h1{font-size:21px;color:#123365;border-bottom:3px solid #123365;padding-bottom:12px}h2{font-size:15px;margin:22px 0 8px;color:#123365}.item{display:flex;gap:12px;border-bottom:1px solid #e2e8f0;padding:6px 0;break-inside:avoid}.item strong{width:42%;flex-shrink:0}.item span{overflow-wrap:anywhere}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cbd5e1;padding:8px;text-align:left;vertical-align:top}th{background:#eaf0f9}tr{break-inside:avoid}.note{font-size:10px;color:#64748b;margin-top:25px}</style></head><body>
+  <h1>Өз ара сабакка кирүү — талдоо отчёту</h1>
+  ${privileged ? item('Мектеп',school) : ''}
+  ${item('Убакыт',date ? new Date(date).toLocaleString('ky-KG') : '—')}
+  ${privileged ? item('Талдоочу',review.teacher_name) : ''}
+  ${privileged ? item('Сабак өткөн мугалим',observed) : ''}
+  ${item('Предмет',review.subject)}${item('Класс',review.classroom)}${item('Тема',review.topic)}${item('Жыйынтык',review.outcome)}
+  <h2>Деңгээлдер боюнча жыйынтык</h2>${distribution}
+  <h2>Сабакка байкоо</h2>${details}
+  <h2>Критерийлер боюнча жооптор</h2><table><thead><tr><th>Критерий</th><th>Тандалган жооп</th></tr></thead><tbody>${criteria}</tbody></table>
+  <p class="note">${privileged ? 'Администрация / директор үчүн отчет.' : 'Мугалим үчүн отчет. Талдоочунун аты-жөнү жашырылган.'}</p>
+  </body></html>`;
+}
+function openPdfReport(review, privileged) {
+  if (!review) return;
+  const popup = window.open('', '_blank');
+  if (!popup) { alert('PDF ачылбады. Браузерден жаңы терезелерге уруксат бериңиз.'); return; }
+  popup.document.open();
+  popup.document.write(pdfReportHtml(review, privileged));
+  popup.document.close();
+  popup.focus();
+  // Колдонуучу ачылган терезеден Ctrl+P → «PDF катары сактоо» тандайт.
+  popup.addEventListener('load', () => popup.print(), {once:true});
+  setTimeout(() => { if (!popup.closed) popup.print(); }, 450);
+}
+$('records').addEventListener('click', event => {
+  const button = event.target.closest('[data-pdf-admin]');
+  if (!button || !isAdmin) return;
+  const review = visibleRows().find(r => String(r.id) === button.dataset.pdfAdmin);
+  if (review) openPdfReport(review, true);
+});
+$('directorRecords').addEventListener('click', event => {
+  const button = event.target.closest('[data-pdf-director]');
+  if (!button || directorSchoolId == null) return;
+  const review = directorVisibleRows().find(r => String(r.id) === button.dataset.pdfDirector && String(r.school_id) === String(directorSchoolId));
+  if (review) openPdfReport(review, true);
+});
+$('cabinetReviews').addEventListener('click', event => {
+  const button = event.target.closest('[data-pdf-cabinet]');
+  if (!button) return;
+  const review = cabinetPdfReviews.find(r => String(r.review_id) === button.dataset.pdfCabinet);
+  if (review) openPdfReport(review, false);
+});
 
 loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || recoveryFromPendingLink || passwordRecoveryMode) tab('cabinet'); });
