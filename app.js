@@ -204,15 +204,20 @@ function tab(which) {
   $('teacher').classList.toggle('hidden',which !== 'teacher');
   $('admin').classList.toggle('hidden',which !== 'admin');
   $('cabinet').classList.toggle('hidden',which !== 'cabinet');
+  if ($('directorPanel')) $('directorPanel').classList.toggle('hidden',which !== 'director');
+  if (which === 'director') $('teacher').classList.add('hidden');
   $('teacherTab').className = which === 'teacher' ? '' : 'secondary';
   $('adminTab').className = which === 'admin' ? '' : 'secondary';
   $('cabinetTab').className = which === 'cabinet' ? '' : 'secondary';
+  if ($('directorTab')) $('directorTab').className = which === 'director' ? '' : 'secondary';
+  if (which === 'director') loadDirectorDashboard();
   if (which === 'admin') checkSession();
   if (which === 'cabinet') loadCabinet();
 }
 $('teacherTab').onclick = () => tab('teacher');
 $('adminTab').onclick = () => tab('admin');
 $('cabinetTab').onclick = () => tab('cabinet');
+if ($('directorTab')) $('directorTab').onclick = () => tab('director');
 
 $('survey').onsubmit = async e => {
   e.preventDefault(); $('surveyError').textContent = '';
@@ -1099,6 +1104,134 @@ $('adminPasswordResetForm').onsubmit = async event => {
     status.textContent='Сырсөз жаңыртылды. Убактылуу сырсөздү мугалимге коопсуз жол менен бериңиз.';
   } catch (error) { status.textContent='Жаңыртуу катасы: '+error.message; }
   finally { button.disabled=false; }
+};
+
+
+// ДИРЕКТОР: өз мектебинин гана окууга уруксат берилген талдоолору.
+// Маалымат базасындагы RLS укуктарды милдеттүү түрдө текшерет.
+const directorPanel = document.createElement('section');
+directorPanel.id = 'directorPanel';
+directorPanel.className = 'hidden';
+directorPanel.innerHTML = `
+  <div class="card topline"><div><h2>Директордун мониторинг кабинети</h2>
+    <p class="muted">Өз мектебинин талдоолорун көрүү жана CSV отчетун жүктөө. Өзгөртүү укугу жок.</p></div>
+    <button type="button" id="directorLogout" class="secondary">Аккаунттан чыгуу</button></div>
+  <div class="card" id="directorLoginCard"><h3>Кирүү</h3>
+    <p class="muted">Директор болуп катталган электрондук почтаңыз жана сырсөзүңүз менен кириңиз.</p>
+    <form id="directorLoginForm"><label>Электрондук почта<input type="email" name="email" required autocomplete="username"></label>
+    <label>Сырсөз<input type="password" name="password" required autocomplete="current-password"></label>
+    <button type="submit">Кирүү</button></form></div>
+  <div id="directorContent" class="hidden"><div class="card">
+    <h3 id="directorSchoolTitle">Мектептин мониторинги</h3>
+    <div class="stats"><div class="stat"><strong id="directorTotal">0</strong>Жалпы талдоо</div>
+    <div class="stat"><strong id="directorWeek">0</strong>Акыркы 7 күн</div>
+    <div class="stat"><strong id="directorObservers">0</strong>Талдоочу мугалим</div></div>
+    <h3>Деңгээлдер боюнча</h3><div id="directorDistribution"></div></div>
+    <div class="card"><div class="topline"><h3>Сабак талдоолору</h3>
+    <button type="button" id="directorExport">CSV жүктөө (Excel)</button></div>
+    <label>Издөө<input id="directorSearch" placeholder="Мугалим, предмет, класс же тема"></label>
+    <div class="scroll"><table><thead><tr><th>Убакыт</th><th>Талдоочу</th><th>Сабак өткөн мугалим</th>
+    <th>Предмет / класс</th><th>Тема</th><th>Жыйынтык</th><th>Толук талдоо</th></tr></thead>
+    <tbody id="directorRecords"></tbody></table></div></div></div>
+  <p id="directorStatus" role="status" class="muted"></p>`;
+document.querySelector('main').appendChild(directorPanel);
+let directorRows = [], directorSchoolId = null;
+const directorVisibleRows = () => directorRows.filter(r =>
+  [r.teacher_name, observedName(r), r.subject, r.classroom, r.topic, r.outcome]
+    .some(v => String(v ?? '').toLocaleLowerCase().includes($('directorSearch').value.trim().toLocaleLowerCase())));
+function renderDirectorDashboard() {
+  const rows = directorVisibleRows();
+  $('directorTotal').textContent = directorRows.length;
+  $('directorWeek').textContent = directorRows.filter(r => Date.now() - new Date(r.created_at).getTime() <= 7 * 86400000).length;
+  $('directorObservers').textContent = new Set(directorRows.map(r => String(r.teacher_name || '').trim().toLocaleLowerCase())).size;
+  $('directorDistribution').innerHTML = labels.map(l => {
+    const n = directorRows.filter(r => r.outcome === l).length;
+    return `<p>${escapeHtml(l)}: <b>${n}</b></p>`;
+  }).join('') + `<p>Аралаш: ${directorRows.filter(r => String(r.outcome || '').startsWith('Аралаш')).length}</p>`;
+  $('directorRecords').innerHTML = rows.map(r => `<tr>
+    <td>${escapeHtml(new Date(r.created_at).toLocaleString('ky-KG'))}</td>
+    <td>${escapeHtml(r.teacher_name)}</td><td>${escapeHtml(observedName(r) || '—')}</td>
+    <td>${escapeHtml(r.subject)} / ${escapeHtml(r.classroom)}</td>
+    <td>${escapeHtml(r.topic)}</td><td>${escapeHtml(r.outcome)}</td>
+    <td>${recordDetails(r)}</td></tr>`).join('') || '<tr><td colspan="7">Талдоолор жок</td></tr>';
+}
+async function loadDirectorDashboard() {
+  const status = $('directorStatus');
+  $('directorContent').classList.add('hidden');
+  directorRows = []; directorSchoolId = null;
+  if (!client) { status.textContent = 'Supabase конфигурациясы табылган жок.'; return; }
+  status.textContent = 'Директордук укук текшерилүүдө...';
+  try {
+    const {data:auth,error:authError} = await client.auth.getUser();
+    if (authError) throw authError;
+    const user = auth?.user;
+    $('directorLoginCard').classList.toggle('hidden', !!user);
+    $('directorLogout').classList.toggle('hidden', !user);
+    if (!user) { status.textContent = 'Кирүү талап кылынат.'; return; }
+    const {data:role,error:roleError} = await client.from('director_users')
+      .select('school_id').eq('user_id',user.id).maybeSingle();
+    if (roleError) throw roleError;
+    if (!role) { status.textContent = 'Бул аккаунтка директордук роль берилген эмес.'; return; }
+    directorSchoolId = role.school_id;
+    $('directorSchoolTitle').textContent = schoolName(directorSchoolId) + ' — мониторинг';
+    status.textContent = 'Талдоолор жүктөлүүдө...';
+    let start = 0;
+    while (true) {
+      const {data,error} = await client.from('lesson_reviews').select('*')
+        .eq('school_id', directorSchoolId).order('created_at',{ascending:false})
+        .range(start, start + 999);
+      if (error) throw error;
+      directorRows.push(...(data || []).filter(r => r.is_test !== true && String(r.school_id) === String(directorSchoolId)));
+      if (!data || data.length < 1000) break;
+      start += 1000;
+    }
+    $('directorContent').classList.remove('hidden');
+    renderDirectorDashboard();
+    status.textContent = 'Көрүү режими: өзгөртүү жана өчүрүү мүмкүн эмес.';
+  } catch (error) { status.textContent = 'Маалымат жүктөлгөн жок: ' + error.message; }
+}
+$('directorSearch').oninput = renderDirectorDashboard;
+$('directorLoginForm').onsubmit = async e => {
+  e.preventDefault();
+  if (!client) return;
+  const button = e.target.querySelector('button'); button.disabled = true;
+  try {
+    const f = new FormData(e.target);
+    const {error} = await client.auth.signInWithPassword({email:f.get('email'),password:f.get('password')});
+    if (error) throw error;
+    e.target.reset();
+    await loadDirectorDashboard();
+    await updateSurveyAccess();
+  } catch (error) { $('directorStatus').textContent = 'Кирүү катасы: ' + error.message; }
+  finally { button.disabled = false; }
+};
+$('directorLogout').onclick = async () => {
+  await client?.auth.signOut();
+  directorRows = []; directorSchoolId = null;
+  await loadDirectorDashboard();
+  await checkSession();
+  await updateSurveyAccess();
+};
+$('directorExport').onclick = () => {
+  if (directorSchoolId == null) return;
+  const cols = ['Убакыт','Талдоочу мугалим','Сабак өткөн мугалим','Предмет','Класс','Тема','Жыйынтык',
+    ...observationFields.filter(([k]) => k !== 'observed_teacher_name').map(([,label]) => label),
+    ...Array.from({length:10},(_,i) => `Суроо ${i+1}`)];
+  const data = directorVisibleRows().map(r => {
+    const qs = Array.isArray(r.answers) && r.answers.length === 10 ? legacyQuestions : questions;
+    return [r.created_at,r.teacher_name,observedName(r),r.subject,r.classroom,r.topic,r.outcome,
+      ...observationFields.filter(([k]) => k !== 'observed_teacher_name').map(([k]) => valueText(r.observation?.[k])),
+      ...Array.from({length:10},(_,i) => qs[i]?.[Number(r.answers?.[i])+1] || '')];
+  });
+  const csv = '\ufeff' + [cols,...data].map(row => row.map(v => {
+    let s = String(v ?? '');
+    if (/^[\s]*[=+@\-\t\r]/.test(s)) s = "'" + s;
+    return '"' + s.replace(/"/g,'""') + '"';
+  }).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  const a = document.createElement('a'); a.href = url;
+  a.download = `director-school-${directorSchoolId}-reviews.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
 };
 
 loadSchools().then(async () => { await checkSession(); await updateTestModeAccess(); await updateSurveyAccess(); if (recoveryLinkHint || recoveryFromPendingLink || passwordRecoveryMode) tab('cabinet'); });
