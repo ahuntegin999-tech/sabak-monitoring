@@ -1,0 +1,1 @@
+V10: Completed additional Russian UI translations, corrected sidebar bottom button overflow. Based on V9 stable. Existing app.js, ui.js, Supabase config and assets unchanged. Open index.html locally and test before deployment.

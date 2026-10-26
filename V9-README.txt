@@ -1,0 +1,1 @@
+V9: Rebuilt from working V7. Reverted V8 body-wide observer and text/attribute cache to avoid page freezing. Added sidebar brand bilingual attributes and missing static translations. Existing app.js, ui.js, design-preview.js, images and config are unchanged. Test locally before publishing.

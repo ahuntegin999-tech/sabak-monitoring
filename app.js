@@ -309,6 +309,7 @@ async function checkSession() {
   }
   isSuperAdminUser = await isSuperAdmin();
   isAdmin = isAdmin || isSuperAdminUser;
+  window.dispatchEvent(new CustomEvent('sabak-admin-access', {detail:{canPreview: !!user && isAdmin && !isSuperAdminUser && adminSchoolId !== null}}));
     await loadSchools();
   $('loginCard').classList.toggle('hidden',isAdmin);
   $('dashboard').classList.toggle('hidden',!isAdmin);

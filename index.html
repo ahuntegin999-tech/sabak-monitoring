@@ -7,11 +7,113 @@
 <title>Өз ара сабакка кирүү</title>
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color:#16223a;background:#f2f5fa}*{box-sizing:border-box}body{margin:0;min-height:100vh;display:flex;flex-direction:column}header{background:#122b54;color:white;padding:24px max(20px,calc((100% - 960px)/2))}h1{margin:0;font-size:clamp(23px,4vw,34px)}header p{color:#d4e4ff;margin-bottom:0}main{max-width:960px;width:100%;flex:1;margin:24px auto;padding:0 16px}.card{background:white;border-radius:16px;padding:24px;margin:16px 0;box-shadow:0 4px 22px #10284b12}input,select,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;margin:7px 0 15px}label{font-weight:600}button{background:#1c5cba;border:0;color:white;padding:12px 19px;border-radius:10px;cursor:pointer;font:inherit;font-weight:650}button:disabled{opacity:.5;cursor:wait}.secondary{background:#e6edf7;color:#17335a}.danger{background:#b42318}.hidden{display:none!important}.tabs{display:flex;gap:8px;flex-wrap:wrap}.question{padding:15px 0;border-bottom:1px solid #e5eaf1}.question p{font-weight:650}.option{display:block;padding:10px;margin:7px 0;border:1px solid #d8e0eb;border-radius:9px;font-weight:400;cursor:pointer}.option:has(input:checked){border-color:#2563eb;background:#edf5ff}.option input{width:auto;margin:0 9px 0 0}.muted{color:#64748b}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}.stat{background:#f1f6ff;border-radius:12px;padding:18px}.stat strong{font-size:30px;display:block}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left;vertical-align:top}th{background:#f2f5fb}.scroll{overflow:auto}.bar{height:12px;background:#e6eaf2;border-radius:10px;overflow:hidden}.fill{height:100%;background:#2563eb}.error{color:#b42318}.success{color:#167548}.topline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.notice{background:#fff6d9;border:1px solid #efd787;border-radius:10px;padding:12px}.smallbtn{font-size:12px;padding:6px 9px}.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.filters label{display:block}.empty{color:#64748b;padding:14px}.check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.check-grid label{font-weight:400;padding:9px;border:1px solid #d8e0eb;border-radius:9px}.check-grid input{width:auto;margin:0 8px 0 0}.section-heading{margin-top:28px;border-top:2px solid #e5eaf1;padding-top:22px}.site-footer{margin-top:auto;background:#122b54;color:#e4edfc;padding:32px 16px}.site-footer blockquote{max-width:760px;margin:0 auto 12px;font-size:clamp(16px,2.5vw,21px);font-weight:650;line-height:1.6}.site-footer small{color:#b9ccec}details{min-width:220px;max-width:400px}details p{line-height:1.5;overflow-wrap:anywhere}summary{cursor:pointer;color:#17335a;font-weight:600}
+
+/* 2026-10-26 visual redesign: original application IDs and event handlers preserved */
+:root{color:#17304c;background:#e8f1fb}body{display:block;background:linear-gradient(120deg,#e5effb 0%,#eff9ff 45%,#e5ecfb 100%);background-attachment:fixed;color:#17304c;padding-left:256px}body::before{content:"";position:fixed;inset:0 0 0 256px;background:radial-gradient(circle at 85% 25%,#92c6ee44,transparent 42%),radial-gradient(circle at 25% 85%,#b5d7f755,transparent 42%);pointer-events:none;z-index:-1}header{background:transparent;color:#18355a;padding:30px 30px 6px}header p{color:#57708b}main{max-width:1320px;margin:0 auto;padding:8px 30px 36px}.card{background:#ffffffad;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid #ffffffdd;box-shadow:0 10px 38px #244c7812;border-radius:19px}.stat{background:#e9f4ffb8}.sidebar{position:fixed;top:0;left:0;bottom:0;width:256px;background:#ffffffb8;backdrop-filter:blur(22px);border-right:1px solid #ffffffd9;box-shadow:5px 0 30px #264a6b12;display:flex;flex-direction:column;padding:22px 13px;z-index:20}.school-brand{display:flex;align-items:center;gap:10px;padding:5px 8px 20px;border-bottom:1px solid #cddff0}.school-brand img{width:54px;height:54px;object-fit:contain}.school-brand strong{display:block;font-size:13px;line-height:1.3}.school-brand small{display:block;font-size:11px;color:#54708c;margin-top:5px}.side-links{display:flex;flex-direction:column;gap:7px;padding-top:22px}.sidebar button{width:100%;text-align:left;padding:12px;border-radius:12px;background:transparent;color:#294867;font-size:14px}.sidebar button:hover,.sidebar button.active{background:#dceeff;color:#135bb5}.side-bottom{margin-top:auto;border-top:1px solid #cddff0;padding:16px 7px 0}.side-bottom label{font-size:13px}.side-bottom select{margin:5px 0 12px;background:#ffffffc9}.site-footer{margin-left:0;background:#173b67e8;text-align:center}.site-footer blockquote{max-width:none;font-size:clamp(10px,1.5vw,18px);white-space:nowrap;line-height:1.5}.site-footer small{display:block;text-align:center}.home-panel{display:block}.home-hero{min-height:245px;display:flex;align-items:center;position:relative;overflow:hidden;padding:35px 36px;background:linear-gradient(115deg,#ffffffc9,#d4e9f7ae)}.home-hero::after{content:"";position:absolute;right:20px;top:-80px;width:370px;height:370px;background:url('assets/school97-logo.png') center/contain no-repeat;opacity:.095;pointer-events:none}.hero-logo{width:112px;height:112px;object-fit:contain;position:relative;z-index:1}.hero-copy{padding-left:26px;position:relative;z-index:1}.hero-copy h2{font-size:clamp(22px,3vw,38px);margin:9px 0}.hero-copy p{color:#496987}.eyebrow{font-size:11px;letter-spacing:.16em;color:#1765ac;font-weight:800}.home-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.home-stats article{margin:0;min-height:128px;display:flex;flex-direction:column;justify-content:space-between}.home-stats article span{font-size:14px;color:#56718c}.home-stats strong{font-size:35px;color:#174f9d}.home-mode #teacher,.home-mode #cabinet,.home-mode #admin,.home-mode #directorPanel,.home-mode .tabs{display:none!important}body:not(.home-mode) #home{display:none}.tabs{display:none}.mobile-menu{display:none}body.settings-mode #teacher,body.settings-mode #cabinet,body.settings-mode #admin,body.settings-mode #directorPanel{display:none!important}body.settings-mode #siteSettings{display:block!important}@media(max-width:800px){body{padding-left:0}body::before{inset:0}header{padding:24px 18px 8px 62px}main{padding:8px 14px 30px}.sidebar{transform:translateX(-105%);transition:transform .2s}.sidebar.open{transform:translateX(0)}.mobile-menu{display:block;position:fixed;top:12px;left:12px;z-index:21;padding:9px 13px}.home-hero{padding:24px 16px;min-height:190px}.hero-logo{width:70px;height:70px}.hero-copy{padding-left:14px}.home-stats{grid-template-columns:1fr}.home-stats article{min-height:100px}.site-footer blockquote{font-size:clamp(8px,2.3vw,13px);letter-spacing:-.2px}}@media(max-width:390px){.site-footer blockquote{white-space:normal}}
+
+/* Full-site glass theme v2: applied to ALL sections, not just the homepage. */
+:root{color-scheme:light;--glass:rgba(235,245,255,.43);--glass-strong:rgba(245,249,255,.65);--glass-border:rgba(255,255,255,.62);--ink:#0c2b55}
+html{min-height:100%;background:#264967}
+body{color:var(--ink);background:transparent!important;min-height:100vh;position:relative}
+body::before{content:"";position:fixed;inset:-65px!important;z-index:-3!important;pointer-events:none;background:url('assets/school97-building.webp') center/cover no-repeat!important;filter:blur(5px) saturate(1.08);transform:scale(1.025)}
+body::after{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:linear-gradient(115deg,rgba(7,33,54,.34),rgba(39,81,127,.20) 52%,rgba(15,40,62,.32))}
+.sidebar{background:rgba(20,47,70,.48)!important;border:1px solid rgba(255,255,255,.24)!important;box-shadow:0 15px 50px rgba(3,18,36,.20);border-radius:20px;top:16px;left:14px;bottom:16px;height:calc(100vh - 32px);width:270px;backdrop-filter:blur(25px);-webkit-backdrop-filter:blur(25px);padding:16px 12px}
+body{padding-left:294px!important}
+.school-brand{border-color:rgba(255,255,255,.25)}.school-brand strong,.school-brand small{color:#fff!important}
+.sidebar button{color:#f4f9ff!important}.sidebar button.active,.sidebar button:hover{background:rgba(26,108,232,.86)!important;color:#fff!important}
+.side-bottom{border-color:rgba(255,255,255,.28)}.side-bottom label{color:#fff}.side-bottom select{background:rgba(255,255,255,.75)!important}
+header{padding:26px 26px 0!important}header h1{color:#fff;font-size:clamp(25px,3vw,36px)}header p{color:#e7f3ff!important}
+main{max-width:none;padding:10px 26px 36px!important}
+.card,.home-hero,.stat,#siteSettings{background:var(--glass)!important;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border)!important;box-shadow:0 10px 35px rgba(8,33,63,.16)!important;border-radius:22px}
+.card .card{background:rgba(255,255,255,.45)!important;box-shadow:none!important}
+.home-hero{background:var(--glass)!important;min-height:270px}.home-hero::after{opacity:.13;width:410px;height:410px;right:0;top:-60px}
+.home-hero .hero-copy h2{color:#082b5c}.home-hero .hero-copy p{color:#244b77}
+.home-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.home-stats article{min-height:160px}
+.home-stats article span{color:#244a75}.home-stats article strong{color:#0958ae}
+input,select,textarea{background:rgba(255,255,255,.75);border-color:rgba(131,165,197,.48)}
+.option,.check-grid label{background:rgba(255,255,255,.35);border-color:rgba(255,255,255,.55)}.option:has(input:checked){background:rgba(196,223,255,.7)}
+.notice{background:rgba(255,246,212,.78)}th{background:rgba(215,230,249,.65)}td{background:rgba(255,255,255,.22)}
+.site-footer{margin:0 26px 22px!important;background:rgba(20,48,79,.44)!important;border:1px solid rgba(255,255,255,.35);border-radius:20px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);color:white;padding:22px 10px}
+.site-footer small{color:#eef5ff}.site-footer blockquote{color:white}
+@media(max-width:800px){body{padding-left:0!important}.sidebar{width:min(290px,86vw);top:8px;left:8px;bottom:8px;height:calc(100vh - 16px)}header{padding:28px 16px 6px 65px!important}main{padding:8px 12px 30px!important}.site-footer{margin:0 12px 12px!important}.home-stats{grid-template-columns:1fr}.home-hero::after{width:240px;height:240px;top:0}}
+
+/* V5: legibility and consistent glass on every section */
+.card,.home-hero,.stat,#siteSettings{background:rgba(239,246,255,.67)!important;border:1px solid rgba(255,255,255,.78)!important}
+.card p,.card label,.card .muted,.home-stats article span{color:#203d60!important}
+.card input,.card select,.card textarea{background:rgba(255,255,255,.91)!important;color:#122c4c!important}
+.home-hero .hero-copy h2{font-size:clamp(22px,2.7vw,35px);line-height:1.17;overflow-wrap:anywhere}
+@media(min-width:801px){.home-hero::after{opacity:.085}}
+
+/* V7: image previews are local-only; never write untrusted image URLs into a backend. */
+.design-preview{border-top:1px solid rgba(255,255,255,.7);margin-top:24px;padding-top:15px}.design-preview input[type=file]{display:block;max-width:520px}.design-preview p{line-height:1.5}
+body.preview-background::before{background-image:var(--preview-bg)!important}
+body.preview-logo .school-brand img,body.preview-logo .hero-logo{content:var(--preview-logo)}
+body.preview-logo .home-hero::after{background-image:var(--preview-logo)!important}
+
+/* V10: Keep sidebar controls inside the sidebar at all desktop zoom levels. */
+.sidebar{min-height:0;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
+.sidebar .school-brand{flex-shrink:0}
+.sidebar .side-links{flex:0 0 auto;min-height:0}
+.sidebar .side-bottom{flex:0 0 auto;min-width:0;padding-bottom:4px}
+.sidebar .side-bottom button{display:block;max-width:100%;width:100%;box-sizing:border-box;white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+.sidebar .side-bottom select{max-width:100%}
+@media(max-height:760px) and (min-width:801px){.sidebar{padding-top:10px;padding-bottom:10px}.sidebar .side-links{gap:2px;padding-top:12px}.sidebar .side-links button{padding-top:9px;padding-bottom:9px}.sidebar .school-brand{padding-bottom:10px}.sidebar .side-bottom{padding-top:10px}}
+
+.notice-entry{padding:17px;margin:13px 0;border:1px solid rgba(255,255,255,.65);background:rgba(255,255,255,.35);border-radius:14px;overflow-wrap:anywhere}.notice-entry p{white-space:normal;line-height:1.5}body.notices-mode #teacher,body.notices-mode #cabinet,body.notices-mode #admin,body.notices-mode #directorPanel,body.notices-mode #home,body.notices-mode #siteSettings{display:none!important}body:not(.notices-mode) #notices{display:none!important}
+</style>
+<style>
+.localized-file-picker{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:7px 0 15px;background:rgba(255,255,255,.75);border:1px solid rgba(131,165,197,.48);border-radius:10px;padding:10px 12px;max-width:670px}
+.file-picker-button{display:inline-block;background:#e6edf7;color:#17335a!important;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.file-picker-button:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+.file-picker-name{overflow-wrap:anywhere;font-size:.94em}
+.file-picker-native{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:0!important;opacity:0!important;overflow:hidden!important;clip-path:inset(50%);pointer-events:none}
 </style>
 </head>
-<body>
-<header><h1>Өз ара сабакка кирүү</h1><p>5 негизги критерий • 3 деңгээл • Онлайн мониторинг</p></header>
+<body class="home-mode">
+<button id="mobileMenu" class="mobile-menu" type="button" aria-label="Меню">☰</button>
+<aside id="sideNav" class="sidebar" aria-label="Негизги меню">
+ <div class="school-brand"><img src="assets/school97-logo.png" alt="№97 мектептин эмблемасы"><div><strong data-ky="Өз ара сабакка кирүү" data-ru="Взаимопосещение уроков">Өз ара сабакка кирүү</strong><small id="sideSchoolName" data-ky="№97 жалпы билим берүү мектеби" data-ru="Общеобразовательная школа №97">№97 жалпы билим берүү мектеби</small></div></div>
+ <nav class="side-links">
+  <button type="button" data-go="home" data-ky="Башкы бет" data-ru="Главная" class="active">Башкы бет</button>
+  <button type="button" data-go="teacher" data-ky="Сабакка талдоо берүү" data-ru="Анализ урока">Сабакка талдоо берүү</button>
+  <button type="button" data-go="cabinet" data-ky="Жеке кабинет" data-ru="Личный кабинет">Жеке кабинет</button>
+  <button type="button" data-go="admin" data-ky="Мониторинг / Башкаруу" data-ru="Мониторинг / Управление">Мониторинг / Башкаруу</button>
+  <button type="button" data-go="director" data-ky="Директор / Отчеттор" data-ru="Директор / Отчёты">Директор / Отчеттор</button>
+  <button type="button" data-go="notices" data-ky="Билдирүүлөр" data-ru="Уведомления">Билдирүүлөр</button>
+  <button type="button" data-go="settings" data-ky="Орнотуулар" data-ru="Настройки">Орнотуулар</button>
+ </nav>
+ <div class="side-bottom"><label for="siteLanguage" data-ky="Тил / Язык" data-ru="Язык / Тил">Тил / Язык</label><select id="siteLanguage"><option value="ky">Кыргызча</option><option value="ru">Русский</option></select>
+ <button id="sideLogin" type="button" data-ky="Кирүү / Катталуу" data-ru="Вход / Регистрация">Кирүү / Катталуу</button>
+ <button id="sideLogout" type="button" class="hidden" data-ky="Аккаунттан чыгуу" data-ru="Выйти">Аккаунттан чыгуу</button></div>
+</aside>
+<header><h1 data-ky="Өз ара сабакка кирүү" data-ru="Взаимопосещение уроков">Өз ара сабакка кирүү</h1><p data-ky="5 негизги критерий • 3 деңгээл • Онлайн мониторинг" data-ru="5 основных критериев • 3 уровня • Онлайн-мониторинг">5 негизги критерий • 3 деңгээл • Онлайн мониторинг</p></header>
 <main>
+<section id="home" class="home-panel">
+ <div class="home-hero card"><img class="hero-logo" src="assets/school97-logo.png" alt="№97 мектеп"><div class="hero-copy"><span class="eyebrow" data-ky="МЕКТЕПТИК МОНИТОРИНГ" data-ru="ШКОЛЬНЫЙ МОНИТОРИНГ">МЕКТЕПТИК МОНИТОРИНГ</span><h2 data-ky="Биргелешкен өнүгүүнүн кадамдары" data-ru="Шаги совместного развития">Биргелешкен өнүгүүнүн кадамдары</h2><p id="homeWelcome">Ар бир талдоо — кесиптик өсүүгө карай жасалган кадам!</p></div></div>
+ <div class="home-stats"><article class="card"><span data-ky="Менин сабагыма берилген талдоолор" data-ru="Анализы моих уроков">Менин сабагыма берилген талдоолор</span><strong id="homeMyReviews">—</strong></article><article class="card"><span data-ky="Акыркы 7 күндө" data-ru="За последние 7 дней">Акыркы 7 күндө</span><strong id="homeMyRecent">—</strong></article><article class="card"><span data-ky="Мектеп боюнча бул айда" data-ru="По школе за месяц">Мектеп боюнча бул айда</span><strong id="homeSchoolMonth">—</strong></article></div>
+ <div class="card"><h3 data-ky="Өз ара сабакка катышуу" data-ru="Взаимопосещение уроков">Өз ара сабакка катышуу</h3><p id="homeStatsNote" class="muted">Жеке көрсөткүчтөр аккаунтка киргенден кийин жаңыланат. Мектептик жалпы статистика үчүн уруксат берилген маалымат булагы керек.</p><button id="homeStart" type="button" data-ky="Сабакка талдоо берүү" data-ru="Перейти к анализу урока">Сабакка талдоо берүү</button></div>
+</section>
+<section id="notices" class="card hidden"><h2 data-ky="Билдирүүлөр" data-ru="Уведомления">Билдирүүлөр</h2><p id="noticesStatus" role="status" aria-live="polite"></p>
+<div id="noticeManager" class="hidden"><h3 data-ky="Жаңы билдирүү" data-ru="Новое уведомление">Жаңы билдирүү</h3><form id="noticeCompose">
+<label data-ky="Алуучу" data-ru="Получатель">Алуучу</label><select name="recipient" id="noticeRecipient"></select>
+<label data-ky="Кыргызча аталышы" data-ru="Заголовок на кыргызском">Кыргызча аталышы</label><input name="title_ky" maxlength="200">
+<label data-ky="Орусча аталышы" data-ru="Заголовок на русском">Орусча аталышы</label><input name="title_ru" maxlength="200">
+<label data-ky="Кыргызча билдирүү" data-ru="Сообщение на кыргызском">Кыргызча билдирүү</label><textarea name="body_ky" maxlength="5000" rows="4"></textarea>
+<label data-ky="Орусча билдирүү" data-ru="Сообщение на русском">Орусча билдирүү</label><textarea name="body_ru" maxlength="5000" rows="4"></textarea>
+<p class="muted" data-ky="Бир тилде аталышын жана текстин толтуруу жетиштүү. Экинчи тил бош болсо, ошол эле билдирүү көрсөтүлөт." data-ru="Достаточно заполнить заголовок и текст на одном языке. Если второй язык пуст, отобразится исходный текст.">Бир тилде аталышын жана текстин толтуруу жетиштүү.</p>
+<button id="noticeSendButton" type="submit" data-ky="Жөнөтүү" data-ru="Отправить">Жөнөтүү</button></form>
+<h3 data-ky="Жөнөтүлгөн билдирүүлөр" data-ru="Отправленные уведомления">Жөнөтүлгөн билдирүүлөр</h3><div id="noticeSentList"></div></div>
+<div id="noticeInbox" class="hidden"><h3 data-ky="Менин билдирүүлөрүм" data-ru="Мои уведомления">Менин билдирүүлөрүм</h3><div id="noticeInboxList"></div></div>
+</section>
+<section id="siteSettings" class="card hidden"><h2 data-ky="Орнотуулар" data-ru="Настройки">Орнотуулар</h2><p data-ky="Сайттын тилин сол менюдан алмаштырыңыз. Сырсөздү жеке кабинеттен өзгөртө аласыз." data-ru="Язык сайта можно изменить в левом меню. Пароль можно сменить в личном кабинете.">Сайттын тилин сол менюдан алмаштырыңыз. Сырсөздү жеке кабинеттен өзгөртө аласыз.</p><button type="button" id="settingsAccount" data-ky="Жеке кабинетке өтүү" data-ru="Перейти в личный кабинет">Жеке кабинетке өтүү</button>
+<div class="design-preview hidden" id="designPreviewPanel">
+ <h3 data-ky="Мектептин жасалгасы — алдын ала көрүү" data-ru="Оформление школы — предварительный просмотр">Мектептин жасалгасы — алдын ала көрүү</h3>
+ <p data-ky="Сүрөттөр ушул браузерде гана убактылуу көрсөтүлөт. Серверге жүктөлбөйт жана башка колдонуучуларга көрүнбөйт. Мектеп администратору үчүн туруктуу сактоо кийинки коопсуз жаңыртууда кошулат." data-ru="Изображения временно отображаются только в этом браузере. Они не загружаются на сервер и не видны другим пользователям. Сохранение для администратора школы появится после настройки защищённого доступа.">Сүрөттөр ушул браузерде гана убактылуу көрсөтүлөт. Серверге жүктөлбөйт жана башка колдонуучуларга көрүнбөйт. Мектеп администратору үчүн туруктуу сактоо кийинки коопсуз жаңыртууда кошулат.</p>
+ <label data-ky="Фондук сүрөт (JPG, PNG, WebP)" data-ru="Фоновое изображение (JPG, PNG, WebP)">Фондук сүрөт (JPG, PNG, WebP)</label><div class="localized-file-picker"><label class="file-picker-button" for="previewBackground" role="button" tabindex="0" data-ky="Файлды тандоо" data-ru="Выбрать файл">Файлды тандоо</label><span id="previewBackgroundName" class="file-picker-name" data-ky="Файл тандалган жок" data-ru="Файл не выбран">Файл тандалган жок</span><input id="previewBackground" class="file-picker-native" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Фондук сүрөт"></div>
+ <label data-ky="Мектептин эмблемасы (PNG сунушталат)" data-ru="Эмблема школы (рекомендуется PNG)">Мектептин эмблемасы (PNG сунушталат)</label><div class="localized-file-picker"><label class="file-picker-button" for="previewLogo" role="button" tabindex="0" data-ky="Файлды тандоо" data-ru="Выбрать файл">Файлды тандоо</label><span id="previewLogoName" class="file-picker-name" data-ky="Файл тандалган жок" data-ru="Файл не выбран">Файл тандалган жок</span><input id="previewLogo" class="file-picker-native" type="file" accept="image/png,image/jpeg,image/webp" aria-label="Мектептин эмблемасы"></div>
+ <button id="resetDesignPreview" type="button" class="secondary" data-ky="Баштапкы көрүнүшкө кайтуу" data-ru="Вернуть исходное оформление">Баштапкы көрүнүшкө кайтуу</button>
+ <p id="designPreviewStatus" role="status" aria-live="polite"></p>
+</div></section>
 <div class="tabs"><button id="teacherTab">Мугалим үчүн</button><button class="secondary" id="adminTab">Администратор</button><button class="secondary" id="cabinetTab">Жеке кабинет</button><button class="secondary" id="directorTab">Директор</button></div>
 <section id="teacher">
 <div class="card">
@@ -83,6 +185,7 @@
 </div>
 <div id="teacherAccountLinkPanel" class="card hidden"><h3>Мугалимдин аккаунтун байланыштыруу</h3><p class="muted">Өз мектебиңизди жана аты-жөнүңүздү тандап, администраторго арыз жөнөтүңүз. Администратор сиздин ким экениңизди текшерет.</p><label>Мектеп<select id="requestSchool"><option value="">Мектепти тандаңыз</option></select></label><label>Мугалим<select id="requestTeacher"><option value="">Мугалимди тандаңыз</option></select></label><button id="submitTeacherLinkRequest" type="button">Арыз жөнөтүү</button><p id="teacherLinkStatus" role="status"></p></div>
 <div id="cabinetDashboard" class="hidden">
+<div id="cabinetNoticeCard" class="card hidden"><h3 data-ky="Менин билдирүүлөрүм" data-ru="Мои уведомления">Менин билдирүүлөрүм</h3><div id="cabinetNoticeList"></div></div>
 <div class="card topline"><div><h2>Менин сабак талдоолорум</h2><p class="muted">Баалоолор жана сунуштар. Талдоочунун аты-жөнү көрсөтүлбөйт.</p></div><button id="cabinetLogout" class="secondary">Аккаунттан чыгуу</button></div>
   <div class="card">
     <h3>Өз сырсөзүмдү өзгөртүү</h3>
@@ -102,7 +205,7 @@
 <div id="dashboard" class="hidden">
 <div class="card topline"><h2>Мониторинг панели</h2><button class="secondary" id="logout">Чыгуу</button></div>
 <div class="card">
-<div class="filters"><label>Мектеп боюнча<select id="adminSchool"><option value="all">Бардык мектептер</option></select></label><label>Издөө<input id="filter" placeholder="Талдоочу, сабак өткөн мугалим, предмет, класс же тема"></label></div>
+<div class="filters"><label>Мектеп боюнча<select id="adminSchool"><option value="all">Бардык мектептер</option></select></label><label>Издөө<input id="filter" placeholder="Талдоочу, сабак өткөн мугалим, предмет, класс же тема" data-ky="Талдоочу, сабак өткөн мугалим, предмет, класс же тема" data-ru="Наблюдатель, учитель, предмет, класс или тема"></label></div>
 <div class="stats"><div class="stat"><strong id="unique">0</strong>Талдоочу мугалим</div><div class="stat"><strong id="total">0</strong>Жалпы талдоо</div><div class="stat"><strong id="week">0</strong>Акыркы 7 күн</div></div>
 <h3>Деңгээлдер боюнча</h3><div id="distribution"></div>
 <h3>Мугалимдердин активдүүлүгү</h3>
@@ -118,7 +221,7 @@
 <h4 id="teacherEditorTitle">Мугалим кошуу</h4>
 <form id="teacherManageForm">
 <input id="editTeacherId" type="hidden">
-<label>Аты-жөнү *<input id="editTeacherName" maxlength="200" required></label>
+<label>Аты-жөнү *<input id="editTeacherName" maxlength="200"></label>
 <label>Кызматы<input id="editTeacherPosition" maxlength="200"></label>
 <label style="display:flex;align-items:center;gap:8px"><input id="editTeacherActive" type="checkbox" checked style="width:auto;margin:0"> Активдүү мугалим</label>
 <p><b>Окуткан предметтери</b></p><div id="teacherSubjectChecks" class="check-grid"></div>
@@ -192,7 +295,7 @@
 </div></div></section>
 <div id="configWarning" class="card notice hidden">Supabase конфигурациясы табылган жок. <b>config.js</b> файлын текшериңиз.</div>
 </main>
-<footer class="site-footer"><blockquote>«Сапаттуу сабак — сапаттуу билимдин башаты, ал эми сапаттуу билим — жаркын келечектин пайдубалы.»</blockquote><small>Бул баалоо — сабактагы байкалган аракеттердин негизинде түзүлгөн методикалык көрсөткүч, расмий аттестация эмес.</small></footer>
+<footer class="site-footer"><blockquote>«Бир сабакка жасалган калыс көз караш — миң сабакка берилген багыт».</blockquote><small>© Абдизаит уулу Жусуп</small></footer>
 <script>
 // Бул баскыч негизги app.js жүктөлүп бүтө электе да иштейт.
 document.getElementById('forgotPasswordBtn').addEventListener('click', function () {
@@ -209,7 +312,25 @@ window.__sabakRecoveryCallback = /(?:[?#&])(?:code|access_token|token_hash)=/.te
 </script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=20261024-own-password2"></script>
+<script src="app.js?v=20261026-v18"></script>
+<script src="ui.js?v=20261026-design1"></script>
+<script src="i18n.js?v=20261026-v19-subjects"></script>
+<script src="design-preview.js?v=20261026-v18"></script>
+<script src="notices.js?v=20261026-v12fix2"></script>
+<script>
+// Custom localized file buttons: keep the real file inputs for existing preview handlers.
+(function(){
+  ['previewBackground','previewLogo'].forEach(function(id){
+    var input=document.getElementById(id), label=document.querySelector('label[for="'+id+'"]'), name=document.getElementById(id+'Name');
+    if(!input||!label||!name)return;
+    input.addEventListener('change',function(){
+      if(input.files && input.files.length){name.textContent=input.files[0].name;name.removeAttribute('data-ky');name.removeAttribute('data-ru');}
+      else {name.setAttribute('data-ky','Файл тандалган жок');name.setAttribute('data-ru','Файл не выбран');var ru=(document.documentElement.lang||'').toLowerCase().startsWith('ru');name.textContent=ru?'Файл не выбран':'Файл тандалган жок';}
+    });
+    label.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();input.click();}});
+  });
+})();
+</script>
 </body>
 </html>
 ```
