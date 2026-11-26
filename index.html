@@ -159,7 +159,11 @@ body.preview-logo .home-hero::after{background-image:var(--preview-logo)!importa
 <p id="cabinetSessionNotice" class="muted"></p>
 <div class="card" style="box-shadow:none;border:1px solid #e2e8f0">
 <h3>Жаңы мугалим катары катталуу</h3><p class="muted">Email'иңизди ырастагандан кийин кирип, мектептеги профилиңизге байланыштыруу арызын жөнөтүңүз.</p>
-<form id="teacherSignupForm"><label>Электрондук почта<input type="email" name="email" required autocomplete="email"></label><label>Сырсөз (кеминде 8 белги)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label><button type="submit">Катталуу</button></form><p id="teacherSignupStatus" role="status"></p></div>
+<form id="teacherSignupForm"><label>Электрондук почта<input type="email" name="email" required autocomplete="email"></label><label>Сырсөз (кеминде 8 белги)<input type="password" name="password" required minlength="8" autocomplete="new-password"></label><button type="submit">Катталуу</button></form><p id="teacherSignupStatus" role="status"></p>
+<div id="signupOtpPanel" class="hidden">
+<form id="signupOtpForm"><label>Электрондук почта<input id="signupOtpEmail" type="email" required autocomplete="email"></label><label>6 орундуу ырастоо коду<input id="signupOtpCode" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6"></label><button type="submit">Кодду ырастоо</button></form>
+<button id="signupOtpResend" type="button" class="secondary">Кодду кайра жөнөтүү</button><p id="signupOtpStatus" role="status"></p></div>
+<button id="signupOtpOpen" type="button" class="secondary">Менде ырастоо коду бар</button></div>
 <form id="cabinetLogin">
 <label>Электрондук почта<input type="email" name="email" autocomplete="username" required></label>
 <label>Сырсөз<input type="password" name="password" autocomplete="current-password" required></label>
@@ -312,9 +316,9 @@ window.__sabakRecoveryCallback = /(?:[?#&])(?:code|access_token|token_hash)=/.te
 </script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="app.js?v=20261026-v18"></script>
+<script src="app.js?v=20261126-otp1"></script>
 <script src="ui.js?v=20261026-design1"></script>
-<script src="i18n.js?v=20261026-v19-subjects"></script>
+<script src="i18n.js?v=20261126-otp1"></script>
 <script src="design-preview.js?v=20261026-v18"></script>
 <script src="notices.js?v=20261026-v12fix2"></script>
 <script>

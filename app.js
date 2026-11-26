@@ -946,11 +946,56 @@ $('teacherSignupForm').onsubmit = async event => {
     event.target.reset();
     status.textContent = data.session
       ? 'Катталдыңыз. Мектепти жана аты-жөнүңүздү тандап арыз жөнөтүңүз.'
-      : 'Каттоо өтүнүчү кабыл алынды. Электрондук почтаңызга келген ырастоо шилтемесин текшериңиз.';
-    if (data.session) { await checkSession(); await loadCabinet(); await updateTestModeAccess(); }
+      : 'Почтаңызга келген кодду же ырастоо шилтемесин текшериңиз.';
+    if (data.session) { await checkSession(); await loadCabinet(); await updateTestModeAccess(); await updateSurveyAccess(); } else { openSignupOtp(String(form.get('email')).trim()); }
   } catch(error) { status.textContent = 'Каттоо катасы: ' + error.message; }
   finally { button.disabled = false; }
 };
+// Email OTP: existing password login and approval RPC remain unchanged.
+function openSignupOtp(email) {
+  if (email) $('signupOtpEmail').value = email;
+  $('signupOtpPanel').classList.remove('hidden');
+  $('signupOtpCode').focus();
+}
+$('signupOtpOpen').onclick = () => openSignupOtp($('teacherSignupForm').elements.email.value.trim());
+let otpBusy = false;
+let otpResendAfter = 0;
+$('signupOtpForm').onsubmit = async event => {
+  event.preventDefault();
+  if (!client || otpBusy) return;
+  const status = $('signupOtpStatus');
+  const email = $('signupOtpEmail').value.trim();
+  const token = $('signupOtpCode').value.trim();
+  if (!/^[0-9]{6}$/.test(token)) return;
+  otpBusy = true;
+  const button = event.target.querySelector('button'); button.disabled = true;
+  try {
+    const {data,error} = await client.auth.verifyOtp({email,token,type:'email'});
+    if (error) throw error;
+    if (!data.session) throw new Error('Session missing');
+    event.target.reset();
+    $('signupOtpPanel').classList.add('hidden');
+    $('teacherSignupForm').reset();
+    await checkSession(); await loadCabinet(); await updateTestModeAccess(); await updateSurveyAccess();
+  } catch(error) { status.textContent = 'Кодду ырастоо катасы: ' + error.message; }
+  finally { otpBusy = false; button.disabled = false; }
+};
+$('signupOtpResend').onclick = async () => {
+  if (!client || otpBusy) return;
+  const status = $('signupOtpStatus');
+  const input = $('signupOtpEmail');
+  if (!input.reportValidity()) return;
+  if (Date.now() < otpResendAfter) { status.textContent = 'Кодду кайра жөнөтүү үчүн 60 секунд күтүңүз.'; return; }
+  otpBusy = true; const button = $('signupOtpResend'); button.disabled = true;
+  try {
+    const {error} = await client.auth.resend({type:'signup',email:input.value.trim(),options:{emailRedirectTo:window.location.origin + window.location.pathname}});
+    if (error) throw error;
+    otpResendAfter = Date.now() + 60000;
+    status.textContent = 'Почтаңызды жана Спам папкасын текшериңиз.';
+  } catch(error) { status.textContent = 'Код жөнөтүү катасы: ' + error.message; }
+  finally { otpBusy = false; button.disabled = false; }
+};
+
 let linkRequestData = null;
 async function loadTeacherAccountLink() {
   if (!client) return;
